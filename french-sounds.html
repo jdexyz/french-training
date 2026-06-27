@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Écoute · French Sound Trainer</title>
+<style>
+  :root{
+    --bg:#0f1226; --bg2:#171a36; --card:#1e2245; --card2:#262a55;
+    --accent:#7c8cff; --accent2:#4ad8c8; --good:#3ddc84; --bad:#ff6b81;
+    --text:#eef0ff; --muted:#a7adcf; --line:#33386b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(1200px 800px at 70% -10%,#202552 0%,var(--bg) 55%);
+    color:var(--text); min-height:100%; display:flex; flex-direction:column; align-items:center;
+    padding:24px 16px 48px;
+  }
+  .wrap{width:100%;max-width:680px}
+  header{text-align:center;margin-bottom:18px}
+  h1{font-size:1.7rem;margin:0 0 4px;letter-spacing:.5px}
+  h1 .fr{color:var(--accent2)}
+  .sub{color:var(--muted);font-size:.95rem;margin:0}
+  .levels{display:flex;gap:10px;justify-content:center;margin:18px 0 8px;flex-wrap:wrap}
+  .lvl{
+    flex:1;min-width:200px;background:var(--card);border:1px solid var(--line);
+    border-radius:16px;padding:16px;cursor:pointer;transition:.15s;text-align:left
+  }
+  .lvl:hover{transform:translateY(-2px);border-color:var(--accent)}
+  .lvl h3{margin:0 0 6px;font-size:1.1rem}
+  .lvl p{margin:0;color:var(--muted);font-size:.88rem}
+  .lvl .tag{display:inline-block;margin-top:10px;font-size:.78rem;color:var(--accent2);
+    background:#13314a;padding:3px 9px;border-radius:999px}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:22px;margin-top:14px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;
+    color:var(--muted);font-size:.86rem}
+  .progress{height:8px;background:#11142e;border-radius:999px;overflow:hidden;margin:8px 0 18px}
+  .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0;transition:.3s}
+
+  .listen{display:flex;flex-direction:column;align-items:center;gap:12px;margin:6px 0 20px}
+  .bigplay{width:108px;height:108px;border-radius:50%;border:none;cursor:pointer;
+    background:linear-gradient(145deg,var(--accent),#5a6bff);color:#fff;font-size:2.6rem;
+    box-shadow:0 10px 30px rgba(124,140,255,.4);transition:.15s;display:flex;align-items:center;justify-content:center}
+  .bigplay:active{transform:scale(.95)}
+  .bigplay.playing{animation:pulse 1s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(124,140,255,.5)}70%{box-shadow:0 0 0 18px rgba(124,140,255,0)}100%{box-shadow:0 0 0 0 rgba(124,140,255,0)}}
+  .listen .hint{color:var(--muted);font-size:.9rem}
+  .slow{background:none;border:1px solid var(--line);color:var(--muted);border-radius:999px;
+    padding:7px 16px;cursor:pointer;font-size:.85rem}
+  .slow:hover{color:var(--text);border-color:var(--accent)}
+  .voicebar{display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--muted)}
+  .voicebar select{background:var(--card2);color:var(--text);border:1px solid var(--line);
+    border-radius:8px;padding:6px 8px;font-size:.82rem;max-width:240px}
+  .toast{font-size:.8rem;color:#f4c98a}
+
+  .options{display:grid;gap:12px}
+  .opt{background:var(--card2);border:1.5px solid var(--line);border-radius:14px;
+    padding:16px 18px;font-size:1.25rem;cursor:pointer;text-align:left;color:var(--text);
+    transition:.12s;display:flex;justify-content:space-between;align-items:center}
+  .opt:not(.locked):hover{border-color:var(--accent);transform:translateY(-1px)}
+  .opt.locked{cursor:default}
+  .opt.correct{border-color:var(--good);background:rgba(61,220,132,.12)}
+  .opt.wrong{border-color:var(--bad);background:rgba(255,107,129,.12)}
+  .opt .opt-ctrl{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:10px}
+  .opt .mark{font-size:1.2rem}
+  .opt .spk{font-size:1.15rem;cursor:pointer;opacity:.65;padding:4px;border-radius:8px;line-height:1}
+  .opt .spk:hover{opacity:1;background:rgba(124,140,255,.18)}
+  .opt .txt{display:flex;flex-direction:column;gap:3px}
+  .opt .it{font-size:.82rem;color:var(--muted);font-style:italic;font-weight:400}
+
+  .feedback{margin-top:16px;min-height:24px;text-align:center;font-size:.98rem}
+  .feedback .ipa{color:var(--accent2);font-weight:600}
+  .footer-row{display:flex;justify-content:space-between;align-items:center;margin-top:18px;gap:10px}
+  .btn{background:var(--accent);border:none;color:#fff;border-radius:12px;padding:12px 22px;
+    font-size:1rem;cursor:pointer;font-weight:600}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn.ghost{background:none;border:1px solid var(--line);color:var(--muted)}
+
+  .result{text-align:center;padding:14px 0}
+  .result .score{font-size:3rem;font-weight:700;color:var(--accent2)}
+  .result p{color:var(--muted)}
+  .warn{background:#3a2a13;border:1px solid #6b4a1f;color:#f4c98a;border-radius:12px;
+    padding:10px 14px;font-size:.85rem;margin-top:14px;text-align:center;display:none}
+  .small{font-size:.8rem;color:var(--muted);text-align:center;margin-top:22px}
+  a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Écoute&nbsp;<span class="fr">·</span>&nbsp;French Sound Trainer</h1>
+    <p class="sub">Train your ear for French vowel sounds — like the difference between <em>chat</em> and <em>chien</em>.</p>
+  </header>
+
+  <!-- MENU -->
+  <section id="menu">
+    <div class="levels">
+      <div class="lvl" onclick="startLevel(1)">
+        <h3>🔤 Level 1 — Words</h3>
+        <p>Hear a short word, pick what you heard. Basic, clear pairs like <em>chat / chien</em>, <em>son / sang</em>.</p>
+        <span class="tag">30 exercises · the basics</span>
+      </div>
+      <div class="lvl" onclick="startLevel(2)">
+        <h3>🔡 Level 2 — Longer words</h3>
+        <p>The same sounds in two-syllable words: <em>bateau / bâton</em>, <em>raisin / raison</em>.</p>
+        <span class="tag">30 exercises · multi-syllable</span>
+      </div>
+      <div class="lvl" onclick="startLevel(3)">
+        <h3>🗣️ Level 3 — Sentences</h3>
+        <p>The sounds hidden inside full sentences: <em>« J'ai promené mon chat. »</em></p>
+        <span class="tag">30 exercises · in context</span>
+      </div>
+    </div>
+    <div id="voiceWarn" class="warn">⚠️ Speech support not detected. For best results use Chrome, Edge or Safari.</div>
+    <p class="small">Audio uses <b>Google Translate's natural French voice</b> by default (needs internet). Switch to any French voice on your computer with the <b>Voice</b> menu inside a level — your choice is remembered. Tap the big button to replay the prompt, the <b>🔊</b> on a card to hear that option, or <b>Slow</b> to stretch it out.</p>
+  </section>
+
+  <!-- QUIZ -->
+  <section id="quiz" class="card" style="display:none">
+    <div class="topbar">
+      <span id="levelLabel"></span>
+      <span id="counter"></span>
+    </div>
+    <div class="progress"><i id="bar"></i></div>
+
+    <div class="listen">
+      <button id="play" class="bigplay" title="Play audio">▶</button>
+      <button id="slow" class="slow">🐢 Slow</button>
+      <div class="voicebar">
+        <label for="voiceSel">Voice</label>
+        <select id="voiceSel"></select>
+      </div>
+      <span class="hint">Listen, then choose what you heard.</span>
+    </div>
+
+    <div id="options" class="options"></div>
+    <div id="feedback" class="feedback"></div>
+
+    <div class="footer-row">
+      <button class="btn ghost" onclick="quitToMenu()">← Menu</button>
+      <button id="next" class="btn" disabled>Next →</button>
+    </div>
+  </section>
+
+  <!-- RESULT -->
+  <section id="result" class="card" style="display:none">
+    <div class="result">
+      <div class="score" id="finalScore">0 / 30</div>
+      <p id="resultMsg"></p>
+      <div id="missedList" style="text-align:left;margin:16px auto;max-width:460px"></div>
+      <div class="footer-row" style="justify-content:center;gap:12px">
+        <button class="btn ghost" onclick="quitToMenu()">← Menu</button>
+        <button class="btn" id="retryBtn">Try again</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ===========================================================
+   DATA — every French vowel phoneme is covered across the set.
+   Oral:  i y u e ɛ ø œ ə a o ɔ
+   Nasal: ɑ̃ ɛ̃ ɔ̃ œ̃
+   Each item: prompt (what is spoken), options, answer index, focus, ipa
+   =========================================================== */
+
+const LEVEL1 = [
+  {p:"chat",  o:["chat","chien"],  a:0, focus:"/a/ vs /jɛ̃/", ipa:"chat /ʃa/ · chien /ʃjɛ̃/"},
+  {p:"son",   o:["son","sang"],    a:0, focus:"/ɔ̃/ vs /ɑ̃/",  ipa:"son /sɔ̃/ · sang /sɑ̃/"},
+  {p:"tout",  o:["tout","tu"],     a:0, focus:"/u/ vs /y/",   ipa:"tout /tu/ · tu /ty/"},
+  {p:"roue",  o:["roue","rue"],    a:0, focus:"/u/ vs /y/",   ipa:"roue /ʁu/ · rue /ʁy/"},
+  {p:"nous",  o:["nous","nu"],     a:0, focus:"/u/ vs /y/",   ipa:"nous /nu/ · nu /ny/"},
+  {p:"vous",  o:["vous","vu"],     a:0, focus:"/u/ vs /y/",   ipa:"vous /vu/ · vu /vy/"},
+  {p:"vie",   o:["vie","vue"],     a:0, focus:"/i/ vs /y/",   ipa:"vie /vi/ · vue /vy/"},
+  {p:"si",    o:["si","su"],       a:0, focus:"/i/ vs /y/",   ipa:"si /si/ · su /sy/"},
+  {p:"lit",   o:["lit","lu"],      a:0, focus:"/i/ vs /y/",   ipa:"lit /li/ · lu /ly/"},
+  {p:"beau",  o:["beau","bon"],    a:0, focus:"/o/ vs /ɔ̃/",   ipa:"beau /bo/ · bon /bɔ̃/"},
+  {p:"mot",   o:["mot","mon"],     a:0, focus:"/o/ vs /ɔ̃/",   ipa:"mot /mo/ · mon /mɔ̃/"},
+  {p:"dos",   o:["dos","don"],     a:0, focus:"/o/ vs /ɔ̃/",   ipa:"dos /do/ · don /dɔ̃/"},
+  {p:"seau",  o:["seau","son"],    a:0, focus:"/o/ vs /ɔ̃/",   ipa:"seau /so/ · son /sɔ̃/"},
+  {p:"faux",  o:["faux","fond"],   a:0, focus:"/o/ vs /ɔ̃/",   ipa:"faux /fo/ · fond /fɔ̃/"},
+  {p:"pain",  o:["pain","pont"],   a:0, focus:"/ɛ̃/ vs /ɔ̃/",   ipa:"pain /pɛ̃/ · pont /pɔ̃/"},
+  {p:"bain",  o:["bain","bon"],    a:0, focus:"/ɛ̃/ vs /ɔ̃/",   ipa:"bain /bɛ̃/ · bon /bɔ̃/"},
+  {p:"fin",   o:["fin","font"],    a:0, focus:"/ɛ̃/ vs /ɔ̃/",   ipa:"fin /fɛ̃/ · font /fɔ̃/"},
+  {p:"vin",   o:["vin","vent"],    a:0, focus:"/ɛ̃/ vs /ɑ̃/",   ipa:"vin /vɛ̃/ · vent /vɑ̃/"},
+  {p:"main",  o:["main","ment"],   a:0, focus:"/ɛ̃/ vs /ɑ̃/",   ipa:"main /mɛ̃/ · ment /mɑ̃/"},
+  {p:"rond",  o:["rond","rang"],   a:0, focus:"/ɔ̃/ vs /ɑ̃/",   ipa:"rond /ʁɔ̃/ · rang /ʁɑ̃/"},
+  {p:"bon",   o:["bon","banc"],    a:0, focus:"/ɔ̃/ vs /ɑ̃/",   ipa:"bon /bɔ̃/ · banc /bɑ̃/"},
+  {p:"long",  o:["long","lent"],   a:0, focus:"/ɔ̃/ vs /ɑ̃/",   ipa:"long /lɔ̃/ · lent /lɑ̃/"},
+  {p:"blond", o:["blond","blanc"], a:0, focus:"/ɔ̃/ vs /ɑ̃/",   ipa:"blond /blɔ̃/ · blanc /blɑ̃/"},
+  {p:"ton",   o:["ton","temps"],   a:0, focus:"/ɔ̃/ vs /ɑ̃/",   ipa:"ton /tɔ̃/ · temps /tɑ̃/"},
+  {p:"sa",    o:["sa","sans"],     a:0, focus:"/a/ vs /ɑ̃/",   ipa:"sa /sa/ · sans /sɑ̃/"},
+  {p:"ça",    o:["ça","cent"],     a:0, focus:"/a/ vs /ɑ̃/",   ipa:"ça /sa/ · cent /sɑ̃/"},
+  {p:"va",    o:["va","vent"],     a:0, focus:"/a/ vs /ɑ̃/",   ipa:"va /va/ · vent /vɑ̃/"},
+  {p:"peur",  o:["peur","peu"],    a:0, focus:"/œ/ vs /ø/",   ipa:"peur /pœʁ/ · peu /pø/"},
+  {p:"sœur",  o:["sœur","ceux"],   a:0, focus:"/œ/ vs /ø/",   ipa:"sœur /sœʁ/ · ceux /sø/"},
+  {p:"jeune", o:["jeune","jeu"],   a:0, focus:"/œ/ vs /ø/",   ipa:"jeune /ʒœn/ · jeu /ʒø/"},
+];
+
+// Level 2 — longer (multi-syllable) words, same clear contrasts.
+const LEVEL2 = [
+  {p:"bateau",  o:["bateau","bâton"],     a:0, focus:"/o/ vs /ɔ̃/",  ipa:"bateau /bato/ · bâton /batɔ̃/"},
+  {p:"manteau", o:["manteau","menton"],   a:0, focus:"/o/ vs /ɔ̃/",  ipa:"manteau /mɑ̃to/ · menton /mɑ̃tɔ̃/"},
+  {p:"chapeau", o:["chapeau","chapon"],   a:0, focus:"/o/ vs /ɔ̃/",  ipa:"chapeau /ʃapo/ · chapon /ʃapɔ̃/"},
+  {p:"oiseau",  o:["oiseau","oison"],     a:0, focus:"/o/ vs /ɔ̃/",  ipa:"oiseau /wazo/ · oison /wazɔ̃/"},
+  {p:"drapeau", o:["drapeau","drapons"],  a:0, focus:"/o/ vs /ɔ̃/",  ipa:"drapeau /dʁapo/ · drapons /dʁapɔ̃/"},
+  {p:"couteau", o:["couteau","coûtons"],  a:0, focus:"/o/ vs /ɔ̃/",  ipa:"couteau /kuto/ · coûtons /kutɔ̃/"},
+  {p:"rideau",  o:["rideau","ridons"],    a:0, focus:"/o/ vs /ɔ̃/",  ipa:"rideau /ʁido/ · ridons /ʁidɔ̃/"},
+  {p:"cerveau", o:["cerveau","servons"],  a:0, focus:"/o/ vs /ɔ̃/",  ipa:"cerveau /sɛʁvo/ · servons /sɛʁvɔ̃/"},
+  {p:"noyau",   o:["noyau","noyons"],     a:0, focus:"/o/ vs /ɔ̃/",  ipa:"noyau /nwajo/ · noyons /nwajɔ̃/"},
+  {p:"berceau", o:["berceau","berçons"],  a:0, focus:"/o/ vs /ɔ̃/",  ipa:"berceau /bɛʁso/ · berçons /bɛʁsɔ̃/"},
+  {p:"marron",  o:["marron","marrant"],   a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"marron /maʁɔ̃/ · marrant /maʁɑ̃/"},
+  {p:"savon",   o:["savon","savant"],     a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"savon /savɔ̃/ · savant /savɑ̃/"},
+  {p:"menton",  o:["menton","mentant"],   a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"menton /mɑ̃tɔ̃/ · mentant /mɑ̃tɑ̃/"},
+  {p:"ballon",  o:["ballon","ballant"],   a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"ballon /balɔ̃/ · ballant /balɑ̃/"},
+  {p:"bouchon", o:["bouchon","bouchant"], a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"bouchon /buʃɔ̃/ · bouchant /buʃɑ̃/"},
+  {p:"glaçon",  o:["glaçon","glaçant"],   a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"glaçon /ɡlasɔ̃/ · glaçant /ɡlasɑ̃/"},
+  {p:"maçon",   o:["maçon","massant"],    a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"maçon /masɔ̃/ · massant /masɑ̃/"},
+  {p:"cochon",  o:["cochon","cachant"],   a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"cochon /kɔʃɔ̃/ · cachant /kaʃɑ̃/"},
+  {p:"torchon", o:["torchon","torchant"], a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"torchon /tɔʁʃɔ̃/ · torchant /tɔʁʃɑ̃/"},
+  {p:"blouson", o:["blouson","blousant"], a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"blouson /bluzɔ̃/ · blousant /bluzɑ̃/"},
+  {p:"flocon",  o:["flocon","floquant"],  a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"flocon /flɔkɔ̃/ · floquant /flɔkɑ̃/"},
+  {p:"melon",   o:["melon","mêlant"],     a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"melon /məlɔ̃/ · mêlant /mɛlɑ̃/"},
+  {p:"jeton",   o:["jeton","jetant"],     a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"jeton /ʒətɔ̃/ · jetant /ʒətɑ̃/"},
+  {p:"raisin",  o:["raisin","raison"],    a:0, focus:"/ɛ̃/ vs /ɔ̃/", ipa:"raisin /ʁɛzɛ̃/ · raison /ʁɛzɔ̃/"},
+  {p:"lapin",   o:["lapin","lapon"],      a:0, focus:"/ɛ̃/ vs /ɔ̃/", ipa:"lapin /lapɛ̃/ · lapon /lapɔ̃/"},
+  {p:"bassin",  o:["bassin","basson"],    a:0, focus:"/ɛ̃/ vs /ɔ̃/", ipa:"bassin /basɛ̃/ · basson /basɔ̃/"},
+  {p:"moulin",  o:["moulin","moulons"],   a:0, focus:"/ɛ̃/ vs /ɔ̃/", ipa:"moulin /mulɛ̃/ · moulons /mulɔ̃/"},
+  {p:"ami",     o:["ami","amant"],        a:0, focus:"/i/ vs /ɑ̃/",  ipa:"ami /ami/ · amant /amɑ̃/"},
+  {p:"dessus",  o:["dessus","dessous"],   a:0, focus:"/y/ vs /u/",  ipa:"dessus /dəsy/ · dessous /dəsu/"},
+  {p:"ici",     o:["ici","issu"],         a:0, focus:"/i/ vs /y/",  ipa:"ici /isi/ · issu /isy/"},
+];
+
+// Level 3 — the same sounds inside full sentences.
+const LEVEL3 = [
+  {p:"J'ai promené mon chat.",        o:["J'ai promené mon chat.","J'ai promené mon chien."],         a:0, focus:"/a/ vs /jɛ̃/", ipa:"chat /ʃa/ · chien /ʃjɛ̃/"},
+  {p:"Il a marqué le but.",           o:["Il a marqué le but.","Il a marqué le bout."],               a:0, focus:"/y/ vs /u/",  ipa:"but /by/ · bout /bu/"},
+  {p:"La roue tourne lentement.",     o:["La roue tourne lentement.","La rue tourne lentement."],     a:0, focus:"/u/ vs /y/",  ipa:"roue /ʁu/ · rue /ʁy/"},
+  {p:"J'adore cette vue.",            o:["J'adore cette vue.","J'adore cette vie."],                  a:0, focus:"/y/ vs /i/",  ipa:"vue /vy/ · vie /vi/"},
+  {p:"Le chat dort dessus.",          o:["Le chat dort dessus.","Le chat dort dessous."],            a:0, focus:"/y/ vs /u/",  ipa:"dessus /dəsy/ · dessous /dəsu/"},
+  {p:"Il vend des pulls.",            o:["Il vend des pulls.","Il vend des poules."],                 a:0, focus:"/y/ vs /u/",  ipa:"pull /pyl/ · poule /pul/"},
+  {p:"Il a très peu.",                o:["Il a très peu.","Il a très peur."],                         a:0, focus:"/ø/ vs /œ/",  ipa:"peu /pø/ · peur /pœʁ/"},
+  {p:"Le bateau est grand.",          o:["Le bateau est grand.","Le bâton est grand."],               a:0, focus:"/o/ vs /ɔ̃/",  ipa:"bateau /bato/ · bâton /batɔ̃/"},
+  {p:"Il porte un manteau marron.",   o:["Il porte un manteau marron.","Il porte un manteau marrant."], a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"marron /maʁɔ̃/ · marrant /maʁɑ̃/"},
+  {p:"C'est un bon savon.",           o:["C'est un bon savon.","C'est un bon savant."],               a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"savon /savɔ̃/ · savant /savɑ̃/"},
+  {p:"Le train est là.",              o:["Le train est là.","Le train est lent."],                   a:0, focus:"/a/ vs /ɑ̃/",  ipa:"là /la/ · lent /lɑ̃/"},
+  {p:"Il passe à toi.",               o:["Il passe à toi.","Il pense à toi."],                        a:0, focus:"/a/ vs /ɑ̃/",  ipa:"passe /pas/ · pense /pɑ̃s/"},
+  {p:"Il fait du vin.",               o:["Il fait du vin.","Il fait du vent."],                       a:0, focus:"/ɛ̃/ vs /ɑ̃/", ipa:"vin /vɛ̃/ · vent /vɑ̃/"},
+  {p:"Il peint le mur.",              o:["Il peint le mur.","Il pend le mur."],                       a:0, focus:"/ɛ̃/ vs /ɑ̃/", ipa:"peint /pɛ̃/ · pend /pɑ̃/"},
+  {p:"C'est un beau gâteau.",         o:["C'est un beau gâteau.","C'est un bon gâteau."],             a:0, focus:"/o/ vs /ɔ̃/",  ipa:"beau /bo/ · bon /bɔ̃/"},
+  {p:"C'est mon seau.",               o:["C'est mon seau.","C'est mon son."],                         a:0, focus:"/o/ vs /ɔ̃/",  ipa:"seau /so/ · son /sɔ̃/"},
+  {p:"Il a les cheveux blancs.",      o:["Il a les cheveux blancs.","Il a les cheveux blonds."],      a:0, focus:"/ɑ̃/ vs /ɔ̃/", ipa:"blanc /blɑ̃/ · blond /blɔ̃/"},
+  {p:"Dessine un rond.",              o:["Dessine un rond.","Dessine un rang."],                      a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"rond /ʁɔ̃/ · rang /ʁɑ̃/"},
+  {p:"Le film est long.",             o:["Le film est long.","Le film est lent."],                   a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"long /lɔ̃/ · lent /lɑ̃/"},
+  {p:"Le chien ronge l'os.",          o:["Le chien ronge l'os.","Le chien range l'os."],              a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"ronge /ʁɔ̃ʒ/ · range /ʁɑ̃ʒ/"},
+  {p:"C'est une forte pente.",        o:["C'est une forte pente.","C'est une forte ponte."],          a:0, focus:"/ɑ̃/ vs /ɔ̃/", ipa:"pente /pɑ̃t/ · ponte /pɔ̃t/"},
+  {p:"Quel beau teint !",             o:["Quel beau teint !","Quel beau ton !"],                      a:0, focus:"/ɛ̃/ vs /ɔ̃/", ipa:"teint /tɛ̃/ · ton /tɔ̃/"},
+  {p:"Je vois le train.",             o:["Je vois le train.","Je vois le tronc."],                    a:0, focus:"/ɛ̃/ vs /ɔ̃/", ipa:"train /tʁɛ̃/ · tronc /tʁɔ̃/"},
+  {p:"C'est un grand pin.",           o:["C'est un grand pin.","C'est un grand pont."],               a:0, focus:"/ɛ̃/ vs /ɔ̃/", ipa:"pin /pɛ̃/ · pont /pɔ̃/"},
+  {p:"J'aime le raisin.",             o:["J'aime le raisin.","J'aime la raison."],                    a:0, focus:"/ɛ̃/ vs /ɔ̃/", ipa:"raisin /ʁɛzɛ̃/ · raison /ʁɛzɔ̃/"},
+  {p:"Le pont est solide.",           o:["Le pont est solide.","Le pan est solide."],                 a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"pont /pɔ̃/ · pan /pɑ̃/"},
+  {p:"Quel beau banc !",              o:["Quel beau banc !","Quel beau bond !"],                      a:0, focus:"/ɑ̃/ vs /ɔ̃/", ipa:"banc /bɑ̃/ · bond /bɔ̃/"},
+  {p:"C'est une jolie rue.",          o:["C'est une jolie rue.","C'est une jolie roue."],             a:0, focus:"/y/ vs /u/",  ipa:"rue /ʁy/ · roue /ʁu/"},
+  {p:"Quel bon vin !",                o:["Quel bon vin !","Quel bon vent !"],                         a:0, focus:"/ɛ̃/ vs /ɑ̃/", ipa:"vin /vɛ̃/ · vent /vɑ̃/"},
+  {p:"Quel joli chapeau !",           o:["Quel joli chapeau !","Quel joli chapon !"],                 a:0, focus:"/o/ vs /ɔ̃/",  ipa:"chapeau /ʃapo/ · chapon /ʃapɔ̃/"},
+];
+
+/* ===== Italian translations (shown under each French word / sentence) ===== */
+const TRANS = {
+  // Level 1 — words
+  "chat":"gatto","chien":"cane","son":"suono","sang":"sangue","tout":"tutto","tu":"tu",
+  "roue":"ruota","rue":"strada","nous":"noi","nu":"nudo","vous":"voi","vu":"visto",
+  "vie":"vita","vue":"vista","si":"se","su":"saputo","lit":"letto","lu":"letto (p.p.)",
+  "beau":"bello","bon":"buono","mot":"parola","mon":"mio","dos":"schiena","don":"dono",
+  "seau":"secchio","faux":"falso","fond":"fondo","pain":"pane","pont":"ponte","bain":"bagno",
+  "fin":"fine","font":"fanno","vin":"vino","vent":"vento","main":"mano","ment":"mente",
+  "rond":"tondo","rang":"fila","banc":"panca","long":"lungo","lent":"lento","blond":"biondo",
+  "blanc":"bianco","ton":"tono","temps":"tempo","sa":"sua","sans":"senza","ça":"questo",
+  "cent":"cento","va":"va","peur":"paura","peu":"poco","sœur":"sorella","ceux":"quelli",
+  "jeune":"giovane","jeu":"gioco",
+  // Level 2 — longer words
+  "bateau":"barca","bâton":"bastone","manteau":"cappotto","menton":"mento","chapeau":"cappello",
+  "chapon":"cappone","oiseau":"uccello","oison":"papero","drapeau":"bandiera","drapons":"(noi) drappeggiamo",
+  "couteau":"coltello","coûtons":"(noi) costiamo","rideau":"tenda","ridons":"(noi) ridiamo",
+  "cerveau":"cervello","servons":"(noi) serviamo","noyau":"nocciolo","noyons":"(noi) anneghiamo",
+  "berceau":"culla","berçons":"(noi) culliamo","marron":"marrone","marrant":"divertente",
+  "savon":"sapone","savant":"sapiente","mentant":"(che) mente","ballon":"pallone","ballant":"penzolante",
+  "bouchon":"tappo","bouchant":"(che) tappa","glaçon":"cubetto di ghiaccio","glaçant":"agghiacciante",
+  "maçon":"muratore","massant":"(che) massaggia","cochon":"maiale","cachant":"(che) nasconde",
+  "torchon":"straccio","torchant":"(che) pulisce","blouson":"giubbotto","blousant":"(che) si gonfia",
+  "flocon":"fiocco","floquant":"(che) riveste","melon":"melone","mêlant":"(che) mescola",
+  "jeton":"gettone","jetant":"(che) getta","raisin":"uva","raison":"ragione","lapin":"coniglio",
+  "lapon":"lappone","bassin":"bacino","basson":"fagotto","moulin":"mulino","moulons":"(noi) maciniamo",
+  "ami":"amico","amant":"amante","dessus":"sopra","dessous":"sotto","ici":"qui","issu":"derivato",
+  // Level 3 — sentences
+  "J'ai promené mon chat.":"Ho portato a spasso il mio gatto.",
+  "J'ai promené mon chien.":"Ho portato a spasso il mio cane.",
+  "Il a marqué le but.":"Ha segnato il gol.",
+  "Il a marqué le bout.":"Ha marcato l'estremità.",
+  "La roue tourne lentement.":"La ruota gira lentamente.",
+  "La rue tourne lentement.":"La strada gira lentamente.",
+  "J'adore cette vue.":"Adoro questa vista.",
+  "J'adore cette vie.":"Adoro questa vita.",
+  "Le chat dort dessus.":"Il gatto dorme sopra.",
+  "Le chat dort dessous.":"Il gatto dorme sotto.",
+  "Il vend des pulls.":"Vende dei maglioni.",
+  "Il vend des poules.":"Vende delle galline.",
+  "Il a très peu.":"Ne ha molto poco.",
+  "Il a très peur.":"Ha molta paura.",
+  "Le bateau est grand.":"La barca è grande.",
+  "Le bâton est grand.":"Il bastone è grande.",
+  "Il porte un manteau marron.":"Indossa un cappotto marrone.",
+  "Il porte un manteau marrant.":"Indossa un cappotto divertente.",
+  "C'est un bon savon.":"È un buon sapone.",
+  "C'est un bon savant.":"È un buon sapiente.",
+  "Le train est là.":"Il treno è qui.",
+  "Le train est lent.":"Il treno è lento.",
+  "Il passe à toi.":"Tocca a te.",
+  "Il pense à toi.":"Pensa a te.",
+  "Il fait du vin.":"Fa il vino.",
+  "Il fait du vent.":"Tira vento.",
+  "Il peint le mur.":"Dipinge il muro.",
+  "Il pend le mur.":"Appende il muro.",
+  "C'est un beau gâteau.":"È una bella torta.",
+  "C'est un bon gâteau.":"È una buona torta.",
+  "C'est mon seau.":"È il mio secchio.",
+  "C'est mon son.":"È il mio suono.",
+  "Il a les cheveux blancs.":"Ha i capelli bianchi.",
+  "Il a les cheveux blonds.":"Ha i capelli biondi.",
+  "Dessine un rond.":"Disegna un cerchio.",
+  "Dessine un rang.":"Disegna una fila.",
+  "Le film est long.":"Il film è lungo.",
+  "Le film est lent.":"Il film è lento.",
+  "Le chien ronge l'os.":"Il cane rosicchia l'osso.",
+  "Le chien range l'os.":"Il cane mette a posto l'osso.",
+  "C'est une forte pente.":"È una forte pendenza.",
+  "C'est une forte ponte.":"È una grande covata.",
+  "Quel beau teint !":"Che bel colorito!",
+  "Quel beau ton !":"Che bel tono!",
+  "Je vois le train.":"Vedo il treno.",
+  "Je vois le tronc.":"Vedo il tronco.",
+  "C'est un grand pin.":"È un grande pino.",
+  "C'est un grand pont.":"È un grande ponte.",
+  "J'aime le raisin.":"Mi piace l'uva.",
+  "J'aime la raison.":"Amo la ragione.",
+  "Le pont est solide.":"Il ponte è solido.",
+  "Le pan est solide.":"Il lembo è solido.",
+  "Quel beau banc !":"Che bella panchina!",
+  "Quel beau bond !":"Che bel balzo!",
+  "C'est une jolie rue.":"È una bella strada.",
+  "C'est une jolie roue.":"È una bella ruota.",
+  "Quel bon vin !":"Che buon vino!",
+  "Quel bon vent !":"Che buon vento!",
+  "Quel joli chapeau !":"Che bel cappello!",
+  "Quel joli chapon !":"Che bel cappone!",
+};
+
+/* =========================== AUDIO ENGINE ===========================
+   Two sources:
+   1) "google"  — Google Translate's TTS (natural voice). Plays as a
+      cross-origin <audio> stream (media playback isn't CORS-blocked).
+      If it can't load (offline / endpoint change), we auto-fall back.
+   2) System voices — the browser's SpeechSynthesis voices. We rank them
+      so a high-quality voice ("Google français", Enhanced/Premium,
+      Thomas, Amélie…) is preferred over the low-quality compact ones.
+   The user can switch sources/voices in the dropdown; choice is saved.
+   ==================================================================== */
+const sel = document.getElementById('voiceSel');
+const playBtn = document.getElementById('play');
+let sysVoices = [];
+let googleFailed = false;
+let curAudio = null;
+
+function rank(v){
+  const n = (v.name||'').toLowerCase();
+  let s = 0;
+  if(n.includes('google')) s += 50;            // Chrome's network neural voice
+  if(/enhanced|premium|neural|siri/.test(n)) s += 40;
+  if(/thomas|amélie|amelie|audrey|aurélie|aurelie|virginie|marie/.test(n)) s += 20;
+  if(/compact|eloquence|pico/.test(n)) s -= 30; // low-quality engines
+  if(/fr[-_]fr/i.test(v.lang)) s += 5;
+  return s;
+}
+
+function buildVoiceList(){
+  const all = ('speechSynthesis' in window) ? speechSynthesis.getVoices() : [];
+  sysVoices = all.filter(v=>/^fr/i.test(v.lang)).sort((a,b)=>rank(b)-rank(a));
+  const saved = localStorage.getItem('ecoute_voice');
+  sel.innerHTML = '';
+  const og = document.createElement('option');
+  og.value = 'google'; og.textContent = 'Google Translate (natural) — recommended';
+  sel.appendChild(og);
+  sysVoices.forEach((v,i)=>{
+    const o = document.createElement('option');
+    o.value = 'sys:'+i;
+    o.textContent = 'System · ' + v.name;
+    sel.appendChild(o);
+  });
+  // restore saved choice if still valid, else default to Google
+  if(saved && [...sel.options].some(o=>o.value===saved)) sel.value = saved;
+  else sel.value = 'google';
+}
+if('speechSynthesis' in window){
+  buildVoiceList();
+  speechSynthesis.onvoiceschanged = buildVoiceList;
+}
+sel.addEventListener('change', ()=>{
+  localStorage.setItem('ecoute_voice', sel.value);
+  setToast('');
+});
+
+function setToast(msg){
+  const h = document.querySelector('.listen .hint');
+  if(!h) return;
+  if(msg){ h.className='hint toast'; h.textContent = msg; }
+  else { h.className='hint'; h.textContent = 'Listen, then choose what you heard.'; }
+}
+
+function bestSysVoice(){ return sysVoices[0] || null; }
+
+function speakSystem(text, slow, voice){
+  if(!('speechSynthesis' in window)) { setToast('No speech support in this browser.'); return; }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  const v = voice || bestSysVoice();
+  u.lang = 'fr-FR';
+  if(v) u.voice = v;
+  u.rate = slow ? 0.5 : 0.95;
+  u.onstart = ()=> playBtn.classList.add('playing');
+  u.onend   = ()=> playBtn.classList.remove('playing');
+  speechSynthesis.speak(u);
+}
+
+function googleURL(text, slow){
+  const base = 'https://translate.google.com/translate_tts';
+  const q = encodeURIComponent(text);
+  let u = `${base}?ie=UTF-8&q=${q}&tl=fr&client=tw-ob&total=1&idx=0&textlen=${text.length}`;
+  if(slow) u += '&ttsspeed=0.3';
+  return u;
+}
+
+function playGoogle(text, slow){
+  return new Promise((resolve,reject)=>{
+    if(curAudio){ curAudio.pause(); curAudio = null; }
+    const a = new Audio();
+    a.crossOrigin = null;
+    a.src = googleURL(text, slow);
+    curAudio = a;
+    let settled = false;
+    const timer = setTimeout(()=>{ if(!settled){ settled=true; reject(new Error('timeout')); } }, 6000);
+    a.onplaying = ()=> playBtn.classList.add('playing');
+    a.onended   = ()=>{ playBtn.classList.remove('playing'); clearTimeout(timer); if(!settled){settled=true;resolve();} };
+    a.onerror   = ()=>{ playBtn.classList.remove('playing'); clearTimeout(timer); if(!settled){settled=true;reject(new Error('audio error'));} };
+    a.play().catch(err=>{ clearTimeout(timer); if(!settled){settled=true;reject(err);} });
+  });
+}
+
+// Unified entry point used everywhere in the quiz.
+function speak(text, slow){
+  if(!text) return;
+  const choice = sel.value;
+  if(choice.startsWith('sys:')){
+    speakSystem(text, !!slow, sysVoices[+choice.split(':')[1]]);
+    return;
+  }
+  // Google source
+  if(googleFailed){ speakSystem(text, !!slow); return; }
+  playGoogle(text, !!slow).catch(()=>{
+    // First failure: remember it, switch UI to best system voice, inform user.
+    googleFailed = true;
+    if(sysVoices.length){
+      sel.value = 'sys:0';
+      localStorage.setItem('ecoute_voice', 'sys:0');
+      setToast('Google audio unavailable — switched to “'+sysVoices[0].name+'”.');
+    } else {
+      setToast('Google audio unavailable and no system French voice found.');
+    }
+    speakSystem(text, !!slow);
+  });
+}
+
+let deck=[], idx=0, score=0, level=1, answered=false, missed=[];
+
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+
+const LEVELS = {1:LEVEL1, 2:LEVEL2, 3:LEVEL3};
+const LEVEL_LABELS = {1:'Level 1 · Words', 2:'Level 2 · Longer words', 3:'Level 3 · Sentences'};
+
+function startLevel(lv){
+  level = lv;
+  const src = LEVELS[lv] || LEVEL1;
+  // shuffle question order; options shuffled per question at render
+  deck = shuffle(src).map(q=>{
+    const order = shuffle(q.o.map((t,i)=>({t,correct:i===q.a})));
+    return {prompt:q.p, p:q.p, focus:q.focus, ipa:q.ipa, order};
+  });
+  idx=0; score=0; missed=[];
+  show('quiz');
+  document.getElementById('levelLabel').textContent = LEVEL_LABELS[lv] || '';
+  render();
+}
+
+function render(){
+  answered=false;
+  const q = deck[idx];
+  document.getElementById('counter').textContent = `Question ${idx+1} / ${deck.length} · Score ${score}`;
+  document.getElementById('bar').style.width = `${(idx)/deck.length*100}%`;
+  document.getElementById('feedback').innerHTML = '';
+  document.getElementById('next').disabled = true;
+
+  const wrap = document.getElementById('options');
+  wrap.innerHTML='';
+  q.order.forEach((opt)=>{
+    const b = document.createElement('button');
+    b.className='opt';
+    const it = TRANS[opt.t] || '';
+    b.innerHTML = `<span class="txt"><span class="fr2">${opt.t}</span>${it?`<span class="it">🇮🇹 ${it}</span>`:''}</span>`
+      + `<span class="opt-ctrl"><span class="spk" title="Hear this option">🔊</span><span class="mark"></span></span>`;
+    b.onclick = ()=> choose(b, opt, q);
+    b.querySelector('.spk').addEventListener('click',(e)=>{ e.stopPropagation(); speak(opt.t, false); });
+    wrap.appendChild(b);
+  });
+  // auto-play the prompt
+  setTimeout(()=> speak(q.p), 250);
+}
+
+function choose(btn, opt, q){
+  if(answered) return;
+  answered=true;
+  const buttons = [...document.querySelectorAll('.opt')];
+  buttons.forEach(b=> b.classList.add('locked'));  // visual lock; speakers stay clickable
+
+  if(opt.correct){
+    score++;
+    btn.classList.add('correct');
+    btn.querySelector('.mark').textContent='✓';
+    document.getElementById('feedback').innerHTML =
+      `<b style="color:var(--good)">Correct !</b> &nbsp; <span class="ipa">${q.ipa}</span> &nbsp;·&nbsp; <span style="color:var(--muted)">${q.focus}</span>`;
+  } else {
+    btn.classList.add('wrong');
+    btn.querySelector('.mark').textContent='✗';
+    // reveal the correct one
+    buttons.forEach(b=>{
+      const label = b.querySelector('.fr2').textContent;
+      const corr = q.order.find(o=>o.correct).t;
+      if(label===corr){ b.classList.add('correct'); b.querySelector('.mark').textContent='✓'; }
+    });
+    missed.push(q);
+    document.getElementById('feedback').innerHTML =
+      `<b style="color:var(--bad)">Not quite.</b> &nbsp; <span class="ipa">${q.ipa}</span> &nbsp;·&nbsp; <span style="color:var(--muted)">${q.focus}</span>`;
+  }
+  document.getElementById('counter').textContent = `Question ${idx+1} / ${deck.length} · Score ${score}`;
+  document.getElementById('next').disabled = false;
+  document.getElementById('next').textContent = (idx+1<deck.length)?'Next →':'See results';
+}
+
+document.getElementById('next').onclick = ()=>{
+  if(idx+1<deck.length){ idx++; render(); }
+  else finish();
+};
+document.getElementById('play').onclick = ()=> speak(deck[idx].p, false);
+document.getElementById('slow').onclick = ()=> speak(deck[idx].p, true);
+document.getElementById('retryBtn').onclick = ()=> startLevel(level);
+
+function finish(){
+  show('result');
+  document.getElementById('bar').style.width='100%';
+  document.getElementById('finalScore').textContent = `${score} / ${deck.length}`;
+  const pct = score/deck.length;
+  let msg = pct===1 ? "Parfait ! A flawless ear. 👂🇫🇷"
+          : pct>=.8 ? "Très bien ! Your ear is sharp."
+          : pct>=.5 ? "Pas mal ! Keep training those vowels."
+          : "Bon courage ! These contrasts are tricky — replay slowly and try again.";
+  document.getElementById('resultMsg').textContent = msg;
+
+  const ml = document.getElementById('missedList');
+  if(missed.length){
+    ml.innerHTML = `<p style="color:var(--muted);margin:0 0 8px">Sounds to review:</p>` +
+      missed.map(m=>`<div style="padding:8px 12px;background:var(--card2);border-radius:10px;margin-bottom:6px">
+        <span style="color:var(--accent2)">${m.p}</span>${TRANS[m.p]?` <span style="color:var(--muted);font-style:italic">— 🇮🇹 ${TRANS[m.p]}</span>`:''}<br>
+        <span style="color:var(--muted);font-size:.85rem">${m.ipa} · ${m.focus}</span></div>`).join('');
+  } else {
+    ml.innerHTML = `<p style="color:var(--good);text-align:center">No mistakes — nothing to review! 🎉</p>`;
+  }
+}
+
+function quitToMenu(){ speechSynthesis.cancel(); show('menu'); }
+function show(id){
+  ['menu','quiz','result'].forEach(s=> document.getElementById(s).style.display = (s===id?'':'none'));
+  window.scrollTo(0,0);
+}
+
+// keyboard: space replays, 1/2/3 choose
+document.addEventListener('keydown',e=>{
+  if(document.getElementById('quiz').style.display==='none') return;
+  if(e.code==='Space'){ e.preventDefault(); speak(deck[idx].p); }
+  if(['1','2','3'].includes(e.key)){
+    const b=document.querySelectorAll('.opt')[+e.key-1];
+    if(b && !b.disabled) b.click();
+  }
+  if(e.key==='Enter' && !document.getElementById('next').disabled) document.getElementById('next').click();
+});
+</script>
+</body>
+</html>

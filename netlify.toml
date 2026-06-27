@@ -1,0 +1,23 @@
+# Netlify configuration for the French Sound Trainer
+# This is a static site (a single HTML file), so there is no build step.
+
+[build]
+  # Serve everything in this folder as-is.
+  publish = "."
+  command = ""
+
+# Serve the app at the site root ("/") without renaming the file.
+# 200 = rewrite (URL stays "/"), not a visible redirect.
+[[redirects]]
+  from = "/"
+  to = "/french-sounds.html"
+  status = 200
+
+# Reasonable defaults. Note: no Content-Security-Policy is set, because the
+# app loads audio from translate.google.com at runtime — a strict CSP would
+# block it.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
