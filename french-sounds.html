@@ -100,8 +100,9 @@
   .keypanel{background:var(--card2);border:1px solid var(--line);border-radius:16px;padding:20px;margin:6px 0}
   .keypanel h3{margin:0 0 8px}
   .keypanel p{margin:0 0 14px;color:var(--muted);font-size:.9rem;line-height:1.5}
-  .keypanel input{width:100%;background:var(--bg2);color:var(--text);border:1px solid var(--line);
-    border-radius:10px;padding:12px 14px;font-size:1rem;margin-bottom:12px}
+  .keypanel input,.keypanel textarea{width:100%;background:var(--bg2);color:var(--text);border:1px solid var(--line);
+    border-radius:10px;padding:12px 14px;font-size:1rem;margin-bottom:12px;font-family:inherit}
+  .keypanel textarea{resize:vertical;line-height:1.4}
   .keyrow{display:flex;justify-content:space-between;align-items:center;gap:12px}
   .keyrow a{font-size:.88rem}
 
@@ -175,6 +176,11 @@
         <p>Read full sentences about French &amp; European law. <em>Gemini</em> grades you and points out which words are off.</p>
         <span class="tag" id="tag5">read sentences · needs a Gemini key</span>
       </div>
+      <div class="lvl" onclick="startLevel(6)">
+        <h3>✏️ Level 6 — Your sentence</h3>
+        <p>Type any French sentence. Hear it read aloud, then record yourself and train until <em>Gemini</em> says every word is right.</p>
+        <span class="tag" id="tag6">your own text · needs a Gemini key</span>
+      </div>
     </div>
     <div id="voiceWarn" class="warn">⚠️ Speech support not detected. For best results use Chrome, Edge or Safari.</div>
     <p class="small">Audio uses <b>Google Translate's natural French voice</b> by default (needs internet). Switch to any French voice on your computer with the <b>Voice</b> menu inside a level — your choice is remembered. Each round the spoken word is picked at random, so you have to <b>listen</b> — memorising answers won't help, and meanings stay hidden until you answer so you can't guess from sense. Tap the big button (or <b>🔊 Normal</b>) to replay the prompt, <b>🐢 Slow</b> to stretch it out, and the <b>🔊 / 🐢</b> on each card to hear that option fast or slow.</p>
@@ -228,6 +234,18 @@
       <div class="keyrow">
         <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get a free key ↗</a>
         <button id="keySave" class="btn">Save &amp; start</button>
+      </div>
+    </div>
+
+    <!-- Level 6 — enter your own sentence -->
+    <div id="sentencePanel" class="keypanel" style="display:none">
+      <h3>✏️ Your sentence</h3>
+      <p>Type or paste any French sentence. We'll read it aloud so you can hear it, then record yourself — <b>Gemini</b> grades your pronunciation word by word, and you can retry as much as you like.</p>
+      <textarea id="sentInput" rows="3" maxlength="200" spellcheck="false"
+        placeholder="e.g. La liberté des uns s'arrête là où commence celle des autres."></textarea>
+      <div class="keyrow">
+        <a href="#" id="sentExample">Use an example</a>
+        <button id="sentStart" class="btn">Train this →</button>
       </div>
     </div>
 
@@ -683,7 +701,7 @@ const QUIZ_LEN = 20;   // questions drawn at random from the (larger) pool each 
 
 function startLevel(lv){
   level = lv;
-  if(lv===4 || lv===5){ startSpeak(); return; }   // Levels 4 & 5 use the mic-based flow
+  if(lv===4 || lv===5 || lv===6){ startSpeak(); return; }   // Levels 4-6 use the mic-based flow
   const src = LEVELS[lv] || LEVEL1;
   // shuffle question order, take a random subset; the spoken word of each pair
   // is chosen at render() time so it differs every round (memory can't cheat).
@@ -865,20 +883,28 @@ const LAW_SENTENCES = [
 ];
 const LAW_LEN = 8;
 
-let speakMode='words';   // 'words' (Level 4) | 'sentences' (Level 5)
+let speakMode='words';   // 'words' (L4) | 'sentences' (L5) | 'custom' (L6, user's own sentence)
 let speakDeck=[], sidx=0, spassed=0, sresults=[], passedSet=new Set();
-function itemText(it){ return speakMode==='sentences' ? it.s : it.w; }
+function itemText(it){ return speakMode==='words' ? it.w : it.s; }
 
 function startSpeak(){
-  speakMode = (level===5) ? 'sentences' : 'words';
-  document.getElementById('plabel').textContent = (level===5) ? 'Level 5 · Law aloud' : 'Level 4 · Speak';
+  speakMode = level===5 ? 'sentences' : level===6 ? 'custom' : 'words';
+  document.getElementById('plabel').textContent =
+    level===5 ? 'Level 5 · Law aloud' : level===6 ? 'Level 6 · Your sentence' : 'Level 4 · Speak';
   show('pronounce');
   if(!geminiKey()){ showKeyPanel(); return; }
-  beginSpeakDeck();
+  proceedAfterKey();
+}
+
+// after a key is confirmed, go to the sentence box (L6) or straight to the deck (L4/L5)
+function proceedAfterKey(){
+  if(speakMode==='custom') showSentencePanel();
+  else beginSpeakDeck();
 }
 
 function showKeyPanel(){
   document.getElementById('speakPanel').style.display='none';
+  document.getElementById('sentencePanel').style.display='none';
   document.getElementById('keyPanel').style.display='';
   document.getElementById('keyInput').value = geminiKey();
   setTimeout(()=> document.getElementById('keyInput').focus(), 50);
@@ -889,9 +915,44 @@ document.getElementById('keySave').onclick = ()=>{
   if(!k){ document.getElementById('keyInput').focus(); return; }
   setGeminiKey(k);
   document.getElementById('keyPanel').style.display='none';
-  beginSpeakDeck();
+  proceedAfterKey();
 };
 document.getElementById('changeKey').onclick = (e)=>{ e.preventDefault(); abortRecording(); showKeyPanel(); };
+
+/* ---- Level 6: enter / train a custom sentence ---- */
+const SENT_EXAMPLES = [
+  "La liberté des uns s'arrête là où commence celle des autres.",
+  "Je voudrais réserver une table pour deux personnes à vingt heures.",
+  "Les grenouilles vertes coassent au bord de l'étang.",
+  "Mon oncle habite un vieux village au cœur des montagnes."
+];
+function showSentencePanel(){
+  document.getElementById('speakPanel').style.display='none';
+  document.getElementById('keyPanel').style.display='none';
+  document.getElementById('sentencePanel').style.display='';
+  setTimeout(()=> document.getElementById('sentInput').focus(), 50);
+}
+document.getElementById('sentExample').onclick = (e)=>{
+  e.preventDefault();
+  const ta = document.getElementById('sentInput');
+  // rotate through examples without Math.random (kept deterministic-safe)
+  const used = ta.value.trim();
+  const next = SENT_EXAMPLES.find(s=>s!==used) || SENT_EXAMPLES[0];
+  ta.value = next; ta.focus();
+};
+document.getElementById('sentStart').onclick = ()=>{
+  const text = document.getElementById('sentInput').value.trim();
+  if(!text){ document.getElementById('sentInput').focus(); return; }
+  startCustomSentence(text);
+};
+function startCustomSentence(text){
+  document.getElementById('sentencePanel').style.display='none';
+  document.getElementById('speakPanel').style.display='';
+  speakDeck = [{s:text, it:''}];
+  sidx=0; spassed=0; sresults=[]; passedSet=new Set();
+  renderSpeak();
+  setTimeout(()=> speak(text, false), 250);   // propose the audio right away
+}
 
 function beginSpeakDeck(){
   document.getElementById('speakPanel').style.display='';
@@ -904,11 +965,17 @@ function beginSpeakDeck(){
 
 function renderSpeak(){
   const item = speakDeck[sidx];
-  const unit = (speakMode==='sentences') ? 'Sentence' : 'Word';
-  document.getElementById('pcounter').textContent = `${unit} ${sidx+1} / ${speakDeck.length} · ${spassed} ✓`;
-  document.getElementById('pbar').style.width = `${sidx/speakDeck.length*100}%`;
+  const sentenceMode = speakMode!=='words';
+  if(speakMode==='custom'){
+    document.getElementById('pcounter').textContent = 'Your sentence';
+    document.getElementById('pbar').style.width = '0%';
+  } else {
+    const unit = sentenceMode ? 'Sentence' : 'Word';
+    document.getElementById('pcounter').textContent = `${unit} ${sidx+1} / ${speakDeck.length} · ${spassed} ✓`;
+    document.getElementById('pbar').style.width = `${sidx/speakDeck.length*100}%`;
+  }
   const wordEl = document.getElementById('pwWord');
-  if(speakMode==='sentences'){
+  if(sentenceMode){
     wordEl.textContent = item.s; wordEl.className = 'pw-fr sentence';
     document.getElementById('pwIpa').textContent = '';
   } else {
@@ -917,14 +984,20 @@ function renderSpeak(){
   }
   document.getElementById('pwTrans').textContent = item.it ? `🇮🇹 ${item.it}` : '';
   const v = document.getElementById('verdict'); v.className='verdict'; v.innerHTML='';
-  document.getElementById('pNext').disabled = true;
-  document.getElementById('pNext').textContent = (sidx+1<speakDeck.length)?'Next →':'See results';
+  if(speakMode==='custom'){
+    document.getElementById('pNext').disabled = false;
+    document.getElementById('pNext').textContent = '✏️ New sentence';
+  } else {
+    document.getElementById('pNext').disabled = true;
+    document.getElementById('pNext').textContent = (sidx+1<speakDeck.length)?'Next →':'See results';
+  }
   document.getElementById('pRetry').style.display='none';
   setRecUI('idle');
 }
 
 document.getElementById('pwHear').onclick = ()=> speak(itemText(speakDeck[sidx]), false);
 document.getElementById('pNext').onclick = ()=>{
+  if(speakMode==='custom'){ showSentencePanel(); return; }
   if(sidx+1<speakDeck.length){ sidx++; renderSpeak(); } else finishSpeak();
 };
 document.getElementById('pRetry').onclick = ()=> renderSpeak();
@@ -941,8 +1014,8 @@ function setRecUI(state){
   const hint = document.getElementById('recHint');
   hint.textContent = state==='recording' ? 'Recording… tap to stop.'
                    : state==='analyzing' ? 'Sending to Gemini…'
-                   : (speakMode==='sentences' ? 'Tap, read the sentence aloud, then tap again to stop.'
-                                              : 'Tap, say the word clearly, then tap again to stop.');
+                   : (speakMode!=='words' ? 'Tap, read the sentence aloud, then tap again to stop.'
+                                          : 'Tap, say the word clearly, then tap again to stop.');
 }
 
 recBtn.onclick = async ()=>{
@@ -955,15 +1028,15 @@ recBtn.onclick = async ()=>{
       return;
     }
     setRecUI('recording');
-    autoStopTimer = setTimeout(()=>{ if(recState==='recording') recBtn.click(); }, speakMode==='sentences'?14000:6000); // safety cap
+    autoStopTimer = setTimeout(()=>{ if(recState==='recording') recBtn.click(); }, speakMode==='custom'?20000:speakMode==='sentences'?14000:6000); // safety cap
   } else if(recState==='recording'){
     clearTimeout(autoStopTimer);
     const wav = endRecording();
     setRecUI('analyzing');
     const item = speakDeck[sidx];
     try{
-      if(speakMode==='sentences') showSentenceVerdict(await analyzeSentence(item, wav));
-      else                        showVerdict(await analyzePronunciation(item, wav));
+      if(speakMode!=='words') showSentenceVerdict(await analyzeSentence(item, wav));
+      else                    showVerdict(await analyzePronunciation(item, wav));
     }catch(err){
       const v=document.getElementById('verdict'); v.className='verdict show bad';
       v.innerHTML = `<div class="vmain">⚠️ Couldn't grade that</div>
@@ -1213,7 +1286,8 @@ function highlightSentence(sentence, mistakes){
 function showSentenceVerdict(v){
   sresults[sidx] = v;
   if(v.passed && !passedSet.has(sidx)){ passedSet.add(sidx); spassed++; }
-  document.getElementById('pcounter').textContent = `Sentence ${sidx+1} / ${speakDeck.length} · ${spassed} ✓`;
+  document.getElementById('pcounter').textContent =
+    (speakMode==='custom') ? 'Your sentence' : `Sentence ${sidx+1} / ${speakDeck.length} · ${spassed} ✓`;
   const item = speakDeck[sidx];
   const el = document.getElementById('verdict');
   el.className = 'verdict show ' + (v.passed?'good':'bad');
