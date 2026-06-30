@@ -798,7 +798,7 @@ function show(id){
    - Audio: captured via Web Audio and encoded to 16-bit mono WAV @16kHz
             (a format Gemini accepts on every browser, unlike webm/opus).
    ========================================================================= */
-const GEMINI_MODEL = 'gemini-2.5-flash';      // fast audio model; thinking disabled below for low latency
+const GEMINI_MODEL = 'gemini-3.5-flash';      // newer audio model — better ear for fine vowel/nasal calls
 const SPEAK_LEN = 10;                          // words per round
 
 function geminiKey(){ return localStorage.getItem('ecoute_gemini_key') || ''; }
@@ -1008,41 +1008,43 @@ function micErrorHint(err){
   return (err && err.message) || 'Could not start the microphone.';
 }
 
-async function analyzePronunciation(item, wavBuf){
-  const key = geminiKey();
-  if(!key) throw new Error('No Gemini key set.');
+function buildGradeBody(item, b64){
   const word = item.w, ipa = item.ipa;
   const conf = item.confusions || [];
   const confLine = conf.length
-    ? `The word "${word}" is easily confused with ${conf.map(c=>`"${c.w}"${c.ipa?` /${c.ipa}/`:''}`).join(' and ')}. Mark it incorrect ONLY if the vowel clearly sounds like one of those instead — and if so, set leansToward to that word. Do NOT penalise a tiny accent or a perfectly fine native pronunciation.`
-    : `Focus on the vowel and any nasal sound; ignore a mild accent.`;
-  const body = {
+    ? `A common mistake is to replace its vowel with that of ${conf.map(c=>`"${c.w}"${c.ipa?` /${c.ipa}/`:''}`).join(' or ')}; mark it incorrect and set leansToward to that word ONLY if you clearly hear that specific substitution.`
+    : ``;
+  return {
     contents:[{ parts:[
       { text:
-        `You are a fair, encouraging French pronunciation coach. The learner said the single French word "${word}"${ipa?` (target IPA: /${ipa}/)`:``}. `
-        + `Grade the way a patient native speaker would: a clear, natural pronunciation of the word is CORRECT and should score high, even with a slight foreign accent. ${confLine} `
-        + `Set leansToward to a word only when you genuinely hear the vowel sitting between two sounds; otherwise leave it an empty string. `
-        + `Ignore background noise, microphone quality and volume. If the clip is empty or silent, score 0 and mark it incorrect. `
-        + `Scoring guide — 90-100: native-like; 75-89: clearly the right word with a mild accent (correct=true); 50-74: understandable but the target vowel is noticeably off (correct=false); below 50: wrong vowel or a different word. Respond as JSON.` },
-      { inline_data:{ mime_type:'audio/wav', data: abToBase64(wavBuf) } }
+        `You are a precise but fair French pronunciation coach grading an advanced learner. Decide whether the recording is a correct pronunciation of the single French word "${word}"${ipa?` whose correct pronunciation is /${ipa}/`:``}. `
+        + `Compare the vowel (and any nasal) the learner produced against the target${ipa?` /${ipa}/`:''}. Give the benefit of the doubt: if the vowel is consistent with the target it is CORRECT, even with a mild non-native accent — and even for short words that are naturally ambiguous in isolation. French nasal vowels /ɑ̃/, /ɔ̃/, /ɛ̃/ resemble each other out of context, so do NOT fail a correct target vowel merely because it could resemble a neighbour. `
+        + confLine + ` `
+        + `Only mark it incorrect when the vowel is CLEARLY a different sound from the target. Ignore background noise, microphone quality and volume. If the clip is empty or silent, score 0 and mark it incorrect. `
+        + `Scoring guide — 90-100: matches the target vowel, native-like; 70-89: target vowel right, mild accent (correct=true); 40-69: vowel noticeably wrong or drifts to a different sound (correct=false); below 40: a clearly different word. Respond as JSON.` },
+      { inline_data:{ mime_type:'audio/wav', data: b64 } }
     ]}],
     generationConfig:{
-      temperature:0.2,
-      thinkingConfig:{ thinkingBudget:0 },   // no slow reasoning step — keep grading fast
+      // Gemini 3.x can't fully disable thinking; "minimal" = lowest latency.
+      // Temperature left at the model default (recommended for Gemini 3).
+      thinkingConfig:{ thinkingLevel:'minimal' },
       responseMimeType:'application/json',
       responseSchema:{
         type:'OBJECT',
         properties:{
-          score:{type:'INTEGER', description:'0-100 per the scoring guide; a correct native pronunciation scores 90-100'},
-          correct:{type:'BOOLEAN', description:'true if a native would naturally hear the target word (a mild accent is fine)'},
+          score:{type:'INTEGER', description:'0-100 per the scoring guide; correct=true needs >=70'},
+          correct:{type:'BOOLEAN', description:'true if the vowel matches the target sound (mild accent fine; isolation ambiguity is not a fault); false only when the vowel is clearly a different sound'},
           heard:{type:'STRING', description:'the closest real French word(s) it actually sounded like, or its IPA'},
-          leansToward:{type:'STRING', description:'only if the vowel clearly sits between the target and another sound, name that word/sound; otherwise empty string'},
+          leansToward:{type:'STRING', description:'only if you clearly hear the target vowel replaced by a neighbour’s vowel, name that word; otherwise empty string'},
           feedback:{type:'STRING', description:'one concrete articulatory tip (tongue height/position, lip rounding, nasality) in English, max 30 words'}
         },
         required:['score','correct','heard','leansToward','feedback']
       }
     }
   };
+}
+
+async function gradeOnce(body, key){
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(key)}`;
   let res;
   try{ res = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); }
@@ -1062,6 +1064,30 @@ async function analyzePronunciation(item, wavBuf){
   out.correct = !!out.correct;
   out.leansToward = (out.leansToward||'').trim();
   return out;
+}
+
+// Two independent graders are sent at once. Passing requires BOTH to agree the
+// pronunciation is correct, which trims false positives without adding false
+// negatives; scores are averaged and the stricter judge's feedback is shown.
+function mergeVerdicts(a, b){
+  const strict = (a.score <= b.score) ? a : b;     // harsher judge drives the notes
+  return {
+    score: Math.round((a.score + b.score)/2),
+    correct: a.correct && b.correct,
+    heard: strict.heard || a.heard || b.heard || '',
+    leansToward: (a.leansToward || b.leansToward || '').trim(),
+    feedback: strict.feedback || a.feedback || b.feedback || ''
+  };
+}
+
+async function analyzePronunciation(item, wavBuf){
+  const key = geminiKey();
+  if(!key) throw new Error('No Gemini key set.');
+  const body = buildGradeBody(item, abToBase64(wavBuf));
+  const settled = await Promise.allSettled([ gradeOnce(body, key), gradeOnce(body, key) ]);
+  const oks = settled.filter(s=>s.status==='fulfilled').map(s=>s.value);
+  if(!oks.length) throw (settled[0].reason || new Error('Grading failed.'));
+  return oks.length===2 ? mergeVerdicts(oks[0], oks[1]) : oks[0];   // one survivor still usable
 }
 
 function showVerdict(v){
