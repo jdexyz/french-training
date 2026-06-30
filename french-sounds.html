@@ -798,7 +798,7 @@ function show(id){
    - Audio: captured via Web Audio and encoded to 16-bit mono WAV @16kHz
             (a format Gemini accepts on every browser, unlike webm/opus).
    ========================================================================= */
-const GEMINI_MODEL = 'gemini-2.5-pro';        // most capable audio model — best ear for fine vowel differences
+const GEMINI_MODEL = 'gemini-2.5-flash';      // fast audio model; thinking disabled below for low latency
 const SPEAK_LEN = 10;                          // words per round
 
 function geminiKey(){ return localStorage.getItem('ecoute_gemini_key') || ''; }
@@ -1014,29 +1014,29 @@ async function analyzePronunciation(item, wavBuf){
   const word = item.w, ipa = item.ipa;
   const conf = item.confusions || [];
   const confLine = conf.length
-    ? `Be especially strict about the vowel. This learner already knows French but tends to produce vowels that sit BETWEEN two sounds. The neighbour word(s) most easily confused with "${word}" are ${conf.map(c=>`"${c.w}"${c.ipa?` /${c.ipa}/`:''}`).join(' and ')}. If the vowel drifts even slightly toward one of those, the word is NOT correct — name which one it leans toward.`
-    : `Be especially strict about vowel quality, nasality, lip-rounding and length.`;
+    ? `The word "${word}" is easily confused with ${conf.map(c=>`"${c.w}"${c.ipa?` /${c.ipa}/`:''}`).join(' and ')}. Mark it incorrect ONLY if the vowel clearly sounds like one of those instead — and if so, set leansToward to that word. Do NOT penalise a tiny accent or a perfectly fine native pronunciation.`
+    : `Focus on the vowel and any nasal sound; ignore a mild accent.`;
   const body = {
     contents:[{ parts:[
       { text:
-        `You are an expert French phonetician with a native-level ear, acting as a precise pronunciation coach. `
-        + `The learner was asked to say the single French word "${word}"${ipa?` (target IPA: /${ipa}/)`:``}. `
-        + confLine + ` `
-        + `Judge like a native listener refining an advanced learner: do not reward mere intelligibility — require the vowel to be unambiguously correct, with no foreign-accent drift. `
-        + `If the vowel is an intermediate/in-between quality, identify the two sounds it lies between. Ignore background noise, microphone quality and volume. `
-        + `If the clip is empty or unintelligible, score 0 and mark it incorrect. Respond as JSON.` },
+        `You are a fair, encouraging French pronunciation coach. The learner said the single French word "${word}"${ipa?` (target IPA: /${ipa}/)`:``}. `
+        + `Grade the way a patient native speaker would: a clear, natural pronunciation of the word is CORRECT and should score high, even with a slight foreign accent. ${confLine} `
+        + `Set leansToward to a word only when you genuinely hear the vowel sitting between two sounds; otherwise leave it an empty string. `
+        + `Ignore background noise, microphone quality and volume. If the clip is empty or silent, score 0 and mark it incorrect. `
+        + `Scoring guide — 90-100: native-like; 75-89: clearly the right word with a mild accent (correct=true); 50-74: understandable but the target vowel is noticeably off (correct=false); below 50: wrong vowel or a different word. Respond as JSON.` },
       { inline_data:{ mime_type:'audio/wav', data: abToBase64(wavBuf) } }
     ]}],
     generationConfig:{
-      temperature:0.1,
+      temperature:0.2,
+      thinkingConfig:{ thinkingBudget:0 },   // no slow reasoning step — keep grading fast
       responseMimeType:'application/json',
       responseSchema:{
         type:'OBJECT',
         properties:{
-          score:{type:'INTEGER', description:'0-100, weighted heavily on exact vowel accuracy, not just intelligibility'},
-          correct:{type:'BOOLEAN', description:'true ONLY if a native would unambiguously hear the target word with no vowel drift'},
+          score:{type:'INTEGER', description:'0-100 per the scoring guide; a correct native pronunciation scores 90-100'},
+          correct:{type:'BOOLEAN', description:'true if a native would naturally hear the target word (a mild accent is fine)'},
           heard:{type:'STRING', description:'the closest real French word(s) it actually sounded like, or its IPA'},
-          leansToward:{type:'STRING', description:'if the vowel sits between the target and another sound, name that word/sound; otherwise empty string'},
+          leansToward:{type:'STRING', description:'only if the vowel clearly sits between the target and another sound, name that word/sound; otherwise empty string'},
           feedback:{type:'STRING', description:'one concrete articulatory tip (tongue height/position, lip rounding, nasality) in English, max 30 words'}
         },
         required:['score','correct','heard','leansToward','feedback']

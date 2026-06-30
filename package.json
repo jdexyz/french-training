@@ -1,0 +1,25 @@
+{
+  "name": "french-training",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Écoute — a single-file browser game to train your ear (and pronunciation) for French vowel sounds, with an optional microphone + Gemini pronunciation grader.",
+  "scripts": {
+    "start": "npx --yes serve .",
+    "dev": "npx --yes serve ."
+  },
+  "keywords": [
+    "french",
+    "pronunciation",
+    "language-learning",
+    "phonetics",
+    "tts",
+    "gemini"
+  ],
+  "author": "Jeremy Dahan",
+  "license": "MIT",
+  "homepage": "https://github.com/jdexyz/french-training#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jdexyz/french-training.git"
+  }
+}
