@@ -107,6 +107,7 @@
 
   .prompt-word{text-align:center;margin:8px 0 18px}
   .pw-fr{font-size:2.6rem;font-weight:700;letter-spacing:.5px}
+  .pw-fr.sentence{font-size:1.5rem;font-weight:600;letter-spacing:0;line-height:1.4}
   .pw-ipa{color:var(--accent2);font-size:1.15rem;margin-top:2px}
   .pw-it{color:var(--muted);font-style:italic;font-size:.95rem;margin-top:4px;min-height:1.2em}
 
@@ -131,6 +132,12 @@
   .verdict .vtip{color:var(--muted);font-size:.9rem;margin-top:6px;line-height:1.4}
   .keylink{text-align:center;margin-top:14px}
   .keylink a{font-size:.8rem;color:var(--muted)}
+  /* Level 5 sentence verdict */
+  .sentence-hl{margin:10px 0 8px;font-size:1.05rem;line-height:1.5;color:var(--text)}
+  .badword{color:var(--bad);font-weight:700;text-decoration:underline wavy var(--bad)}
+  .verdict .mistakes{list-style:none;margin:6px 0 0;padding:0;text-align:left}
+  .verdict .mistakes li{padding:7px 12px;background:var(--bg2);border-radius:9px;margin-top:6px;font-size:.92rem}
+  .verdict .mistakes li b{color:var(--bad)}
 </style>
 </head>
 <body>
@@ -162,6 +169,11 @@
         <h3>🎤 Level 4 — Speak</h3>
         <p>Now say the Level 1 words yourself. Your microphone + Google <em>Gemini</em> score how close you sound.</p>
         <span class="tag" id="tag4">speak out loud · needs a Gemini key</span>
+      </div>
+      <div class="lvl" onclick="startLevel(5)">
+        <h3>⚖️ Level 5 — Law aloud</h3>
+        <p>Read full sentences about French &amp; European law. <em>Gemini</em> grades you and points out which words are off.</p>
+        <span class="tag" id="tag5">read sentences · needs a Gemini key</span>
       </div>
     </div>
     <div id="voiceWarn" class="warn">⚠️ Speech support not detected. For best results use Chrome, Edge or Safari.</div>
@@ -671,7 +683,7 @@ const QUIZ_LEN = 20;   // questions drawn at random from the (larger) pool each 
 
 function startLevel(lv){
   level = lv;
-  if(lv===4){ startSpeak(); return; }   // Level 4 has its own mic-based flow
+  if(lv===4 || lv===5){ startSpeak(); return; }   // Levels 4 & 5 use the mic-based flow
   const src = LEVELS[lv] || LEVEL1;
   // shuffle question order, take a random subset; the spoken word of each pair
   // is chosen at render() time so it differs every round (memory can't cheat).
@@ -830,11 +842,36 @@ const L1_WORDS = (()=>{
   return [...map.values()];
 })();
 
+/* ---- Level 5 — read aloud full sentences about French / European law ---- */
+const LAW_SENTENCES = [
+  {s:"Le Parlement européen adopte de nouvelles directives.",            it:"Il Parlamento europeo adotta nuove direttive."},
+  {s:"La Cour de cassation a rendu son arrêt hier.",                     it:"La Corte di cassazione ha emesso la sentenza ieri."},
+  {s:"Le Conseil constitutionnel vérifie la conformité des lois.",       it:"Il Consiglio costituzionale verifica la conformità delle leggi."},
+  {s:"Chaque citoyen européen bénéficie de la libre circulation.",       it:"Ogni cittadino europeo beneficia della libera circolazione."},
+  {s:"Le droit communautaire prime sur le droit national.",              it:"Il diritto comunitario prevale sul diritto nazionale."},
+  {s:"La Commission européenne propose un nouveau règlement.",           it:"La Commissione europea propone un nuovo regolamento."},
+  {s:"Les traités garantissent les droits fondamentaux des personnes.",  it:"I trattati garantiscono i diritti fondamentali delle persone."},
+  {s:"Le tribunal administratif examine les recours des citoyens.",      it:"Il tribunale amministrativo esamina i ricorsi dei cittadini."},
+  {s:"La Convention européenne protège les libertés individuelles.",     it:"La Convenzione europea protegge le libertà individuali."},
+  {s:"Le législateur a voté le projet de loi à l'unanimité.",            it:"Il legislatore ha votato il disegno di legge all'unanimità."},
+  {s:"La jurisprudence interprète les textes juridiques ambigus.",       it:"La giurisprudenza interpreta i testi giuridici ambigui."},
+  {s:"Le Conseil d'État conseille le gouvernement sur les décrets.",     it:"Il Consiglio di Stato consiglia il governo sui decreti."},
+  {s:"La Cour de justice de l'Union européenne siège à Luxembourg.",     it:"La Corte di giustizia dell'Unione europea ha sede a Lussemburgo."},
+  {s:"Le règlement protège les données personnelles des utilisateurs.",  it:"Il regolamento protegge i dati personali degli utenti."},
+  {s:"L'avocat plaide la cause de son client devant le juge.",           it:"L'avvocato difende la causa del suo cliente davanti al giudice."},
+  {s:"Le contrat engage les deux parties signataires.",                  it:"Il contratto vincola le due parti firmatarie."},
+  {s:"La séparation des pouvoirs garantit l'indépendance de la justice.", it:"La separazione dei poteri garantisce l'indipendenza della giustizia."},
+  {s:"Les États membres ratifient le traité européen.",                  it:"Gli Stati membri ratificano il trattato europeo."},
+];
+const LAW_LEN = 8;
+
+let speakMode='words';   // 'words' (Level 4) | 'sentences' (Level 5)
 let speakDeck=[], sidx=0, spassed=0, sresults=[], passedSet=new Set();
+function itemText(it){ return speakMode==='sentences' ? it.s : it.w; }
 
 function startSpeak(){
-  level = 4;
-  document.getElementById('plabel').textContent = 'Level 4 · Speak';
+  speakMode = (level===5) ? 'sentences' : 'words';
+  document.getElementById('plabel').textContent = (level===5) ? 'Level 5 · Law aloud' : 'Level 4 · Speak';
   show('pronounce');
   if(!geminiKey()){ showKeyPanel(); return; }
   beginSpeakDeck();
@@ -858,17 +895,26 @@ document.getElementById('changeKey').onclick = (e)=>{ e.preventDefault(); abortR
 
 function beginSpeakDeck(){
   document.getElementById('speakPanel').style.display='';
-  speakDeck = shuffle(L1_WORDS).slice(0, SPEAK_LEN);
+  speakDeck = (speakMode==='sentences')
+    ? shuffle(LAW_SENTENCES).slice(0, LAW_LEN)
+    : shuffle(L1_WORDS).slice(0, SPEAK_LEN);
   sidx=0; spassed=0; sresults=[]; passedSet=new Set();
   renderSpeak();
 }
 
 function renderSpeak(){
   const item = speakDeck[sidx];
-  document.getElementById('pcounter').textContent = `Word ${sidx+1} / ${speakDeck.length} · ${spassed} ✓`;
+  const unit = (speakMode==='sentences') ? 'Sentence' : 'Word';
+  document.getElementById('pcounter').textContent = `${unit} ${sidx+1} / ${speakDeck.length} · ${spassed} ✓`;
   document.getElementById('pbar').style.width = `${sidx/speakDeck.length*100}%`;
-  document.getElementById('pwWord').textContent = item.w;
-  document.getElementById('pwIpa').textContent = item.ipa ? `/${item.ipa}/` : '';
+  const wordEl = document.getElementById('pwWord');
+  if(speakMode==='sentences'){
+    wordEl.textContent = item.s; wordEl.className = 'pw-fr sentence';
+    document.getElementById('pwIpa').textContent = '';
+  } else {
+    wordEl.textContent = item.w; wordEl.className = 'pw-fr';
+    document.getElementById('pwIpa').textContent = item.ipa ? `/${item.ipa}/` : '';
+  }
   document.getElementById('pwTrans').textContent = item.it ? `🇮🇹 ${item.it}` : '';
   const v = document.getElementById('verdict'); v.className='verdict'; v.innerHTML='';
   document.getElementById('pNext').disabled = true;
@@ -877,7 +923,7 @@ function renderSpeak(){
   setRecUI('idle');
 }
 
-document.getElementById('pwHear').onclick = ()=> speak(speakDeck[sidx].w, false);
+document.getElementById('pwHear').onclick = ()=> speak(itemText(speakDeck[sidx]), false);
 document.getElementById('pNext').onclick = ()=>{
   if(sidx+1<speakDeck.length){ sidx++; renderSpeak(); } else finishSpeak();
 };
@@ -895,7 +941,8 @@ function setRecUI(state){
   const hint = document.getElementById('recHint');
   hint.textContent = state==='recording' ? 'Recording… tap to stop.'
                    : state==='analyzing' ? 'Sending to Gemini…'
-                   : 'Tap, say the word clearly, then tap again to stop.';
+                   : (speakMode==='sentences' ? 'Tap, read the sentence aloud, then tap again to stop.'
+                                              : 'Tap, say the word clearly, then tap again to stop.');
 }
 
 recBtn.onclick = async ()=>{
@@ -908,15 +955,15 @@ recBtn.onclick = async ()=>{
       return;
     }
     setRecUI('recording');
-    autoStopTimer = setTimeout(()=>{ if(recState==='recording') recBtn.click(); }, 6000); // safety cap
+    autoStopTimer = setTimeout(()=>{ if(recState==='recording') recBtn.click(); }, speakMode==='sentences'?14000:6000); // safety cap
   } else if(recState==='recording'){
     clearTimeout(autoStopTimer);
     const wav = endRecording();
     setRecUI('analyzing');
     const item = speakDeck[sidx];
     try{
-      const verdict = await analyzePronunciation(item, wav);
-      showVerdict(verdict);
+      if(speakMode==='sentences') showSentenceVerdict(await analyzeSentence(item, wav));
+      else                        showVerdict(await analyzePronunciation(item, wav));
     }catch(err){
       const v=document.getElementById('verdict'); v.className='verdict show bad';
       v.innerHTML = `<div class="vmain">⚠️ Couldn't grade that</div>
@@ -1090,6 +1137,100 @@ async function analyzePronunciation(item, wavBuf){
   return oks.length===2 ? mergeVerdicts(oks[0], oks[1]) : oks[0];   // one survivor still usable
 }
 
+/* ---- Level 5: grade a whole spoken sentence, naming the words that are off ---- */
+function buildSentenceBody(sentence, b64){
+  return {
+    contents:[{ parts:[
+      { text:
+        `You are a precise but fair French pronunciation coach. The learner read this French sentence aloud (a sentence about French / European law):\n"${sentence}"\n`
+        + `Listen to the recording and judge their pronunciation word by word. List the specific words from the sentence that are mispronounced — wrong vowel or consonant, missing/incorrect liaison, wrong word, or clearly misplaced stress. `
+        + `Give the benefit of the doubt for a mild non-native accent: only flag a word if its error would actually stand out to a native listener. For each flagged word give a short, concrete tip. Use the exact spelling of the word as it appears in the sentence. `
+        + `Ignore background noise, microphone quality and volume. If the recording is empty or does not match the sentence, score 0 and mark it not passed. `
+        + `Scoring guide — 90-100: fluent, native-like; 75-89: clear with a mild accent; 50-74: understandable but several words are off; below 50: hard to follow or wrong sentence. Respond as JSON.` },
+      { inline_data:{ mime_type:'audio/wav', data: b64 } }
+    ]}],
+    generationConfig:{
+      thinkingConfig:{ thinkingLevel:'minimal' },
+      responseMimeType:'application/json',
+      responseSchema:{
+        type:'OBJECT',
+        properties:{
+          score:{type:'INTEGER', description:'0-100 per the scoring guide'},
+          passed:{type:'BOOLEAN', description:'true if the sentence is well pronounced overall (a mild accent is fine, no word stands out as wrong)'},
+          mistakes:{type:'ARRAY', description:'words that are mispronounced; empty if none',
+            items:{ type:'OBJECT', properties:{
+              word:{type:'STRING', description:'the exact word from the sentence'},
+              issue:{type:'STRING', description:'short, concrete tip on what was wrong, max 15 words'}
+            }, required:['word','issue'] } },
+          feedback:{type:'STRING', description:'one short overall tip in English, max 25 words'}
+        },
+        required:['score','passed','mistakes','feedback']
+      }
+    }
+  };
+}
+
+function mergeSentenceVerdicts(a, b){
+  const byWord = new Map();
+  [...(a.mistakes||[]), ...(b.mistakes||[])].forEach(m=>{
+    const k = (m.word||'').toLowerCase().trim();
+    if(k && !byWord.has(k)) byWord.set(k, {word:m.word, issue:m.issue||''});
+  });
+  return {
+    score: Math.round((a.score + b.score)/2),
+    passed: !!a.passed && !!b.passed,                 // both judges must agree it's clean
+    mistakes: [...byWord.values()],                   // union — surface anything either judge caught
+    feedback: (a.score<=b.score?a:b).feedback || a.feedback || b.feedback || ''
+  };
+}
+
+async function analyzeSentence(item, wavBuf){
+  const key = geminiKey();
+  if(!key) throw new Error('No Gemini key set.');
+  const body = buildSentenceBody(item.s, abToBase64(wavBuf));
+  const norm = v=>{
+    v.score = Math.max(0, Math.min(100, parseInt(v.score,10)||0));
+    v.passed = !!v.passed;
+    v.mistakes = Array.isArray(v.mistakes) ? v.mistakes.filter(m=>m && m.word) : [];
+    return v;
+  };
+  const settled = await Promise.allSettled([ gradeOnce(body, key).then(norm), gradeOnce(body, key).then(norm) ]);
+  const oks = settled.filter(s=>s.status==='fulfilled').map(s=>s.value);
+  if(!oks.length) throw (settled[0].reason || new Error('Grading failed.'));
+  return oks.length===2 ? mergeSentenceVerdicts(oks[0], oks[1]) : oks[0];
+}
+
+function highlightSentence(sentence, mistakes){
+  let html = escapeHtml(sentence);
+  (mistakes||[]).forEach(m=>{
+    const w = (m.word||'').trim(); if(!w) return;
+    const re = new RegExp('('+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')', 'gi');
+    html = html.replace(re, '<span class="badword">$1</span>');
+  });
+  return html;
+}
+
+function showSentenceVerdict(v){
+  sresults[sidx] = v;
+  if(v.passed && !passedSet.has(sidx)){ passedSet.add(sidx); spassed++; }
+  document.getElementById('pcounter').textContent = `Sentence ${sidx+1} / ${speakDeck.length} · ${spassed} ✓`;
+  const item = speakDeck[sidx];
+  const el = document.getElementById('verdict');
+  el.className = 'verdict show ' + (v.passed?'good':'bad');
+  const list = (v.mistakes && v.mistakes.length)
+    ? `<ul class="mistakes">` + v.mistakes.map(m=>
+        `<li><b>${escapeHtml(m.word)}</b>${m.issue?` — ${escapeHtml(m.issue)}`:''}</li>`).join('') + `</ul>`
+    : `<div class="vheard" style="color:var(--good)">Every word sounded good! 🎉</div>`;
+  el.innerHTML =
+    `<div class="vscore">${v.score}<span>/100</span></div>
+     <div class="vmain">${v.passed?'✓ Well pronounced':'✗ Some words need work'}</div>
+     <div class="sentence-hl">${highlightSentence(item.s, v.mistakes)}</div>
+     ${list}
+     ${v.feedback?`<div class="vtip">💡 ${escapeHtml(v.feedback)}</div>`:''}`;
+  document.getElementById('pNext').disabled = false;
+  document.getElementById('pRetry').style.display='';
+}
+
 function showVerdict(v){
   sresults[sidx] = v;
   if(v.correct && !passedSet.has(sidx)){ passedSet.add(sidx); spassed++; }
@@ -1110,23 +1251,31 @@ function finishSpeak(){
   abortRecording();
   show('result');
   document.getElementById('bar').style.width='100%';
+  const unit = (speakMode==='sentences') ? 'sentences' : 'words';
   document.getElementById('finalScore').textContent = `${spassed} / ${speakDeck.length}`;
   const pct = spassed/speakDeck.length;
-  let msg = pct===1 ? "Bravo ! Every word came through clearly. 🎙️🇫🇷"
-          : pct>=.7 ? "Très bien ! Most of your words were spot on."
+  let msg = pct===1 ? `Bravo ! Every ${unit==='sentences'?'sentence':'word'} came through clearly. 🎙️🇫🇷`
+          : pct>=.7 ? `Très bien ! Most of your ${unit} were spot on.`
           : pct>=.4 ? "Pas mal ! Replay the reference and mimic it closely."
-          : "Bon courage ! Listen to each word first, then copy its rhythm and vowels.";
+          : "Bon courage ! Listen first, then copy the rhythm and vowels.";
   document.getElementById('resultMsg').textContent = msg;
 
   const ml = document.getElementById('missedList');
   const rows = speakDeck.map((it,i)=>({it, v:sresults[i], i})).filter(r=>!passedSet.has(r.i));
-  if(rows.length){
+  if(!rows.length){
+    ml.innerHTML = `<p style="color:var(--good);text-align:center">Perfect pronunciation — nothing to practise! 🎉</p>`;
+  } else if(speakMode==='sentences'){
+    ml.innerHTML = `<p style="color:var(--muted);margin:0 0 8px">Sentences to practise:</p>` +
+      rows.map(r=>`<div style="padding:10px 12px;background:var(--card2);border-radius:10px;margin-bottom:6px">
+        <span style="color:var(--accent2)">${escapeHtml(r.it.s)}</span>
+        ${r.v&&r.v.mistakes&&r.v.mistakes.length
+          ? `<br><span style="color:var(--muted);font-size:.85rem">Watch: ${r.v.mistakes.map(m=>`<b style="color:var(--bad)">${escapeHtml(m.word)}</b>`).join(', ')}</span>`
+          : (r.v&&r.v.feedback?`<br><span style="color:var(--muted);font-size:.85rem">💡 ${escapeHtml(r.v.feedback)}</span>`:'')}</div>`).join('');
+  } else {
     ml.innerHTML = `<p style="color:var(--muted);margin:0 0 8px">Words to practise:</p>` +
       rows.map(r=>`<div style="padding:8px 12px;background:var(--card2);border-radius:10px;margin-bottom:6px">
         <span style="color:var(--accent2)">${r.it.w}</span>${r.it.ipa?` <span style="color:var(--muted)">/${r.it.ipa}/</span>`:''}${r.it.it?` <span style="color:var(--muted);font-style:italic">— 🇮🇹 ${r.it.it}</span>`:''}
         ${r.v&&r.v.feedback?`<br><span style="color:var(--muted);font-size:.85rem">💡 ${escapeHtml(r.v.feedback)}</span>`:''}</div>`).join('');
-  } else {
-    ml.innerHTML = `<p style="color:var(--good);text-align:center">Perfect pronunciation — nothing to practise! 🎉</p>`;
   }
 }
 
