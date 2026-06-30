@@ -95,6 +95,42 @@
     padding:10px 14px;font-size:.85rem;margin-top:14px;text-align:center;display:none}
   .small{font-size:.8rem;color:var(--muted);text-align:center;margin-top:22px}
   a{color:var(--accent)}
+
+  /* ===== Level 4 — Speak (mic + Gemini) ===== */
+  .keypanel{background:var(--card2);border:1px solid var(--line);border-radius:16px;padding:20px;margin:6px 0}
+  .keypanel h3{margin:0 0 8px}
+  .keypanel p{margin:0 0 14px;color:var(--muted);font-size:.9rem;line-height:1.5}
+  .keypanel input{width:100%;background:var(--bg2);color:var(--text);border:1px solid var(--line);
+    border-radius:10px;padding:12px 14px;font-size:1rem;margin-bottom:12px}
+  .keyrow{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .keyrow a{font-size:.88rem}
+
+  .prompt-word{text-align:center;margin:8px 0 18px}
+  .pw-fr{font-size:2.6rem;font-weight:700;letter-spacing:.5px}
+  .pw-ipa{color:var(--accent2);font-size:1.15rem;margin-top:2px}
+  .pw-it{color:var(--muted);font-style:italic;font-size:.95rem;margin-top:4px;min-height:1.2em}
+
+  .recwrap{display:flex;flex-direction:column;align-items:center;gap:12px;margin:6px 0 18px}
+  .recbtn{width:124px;height:124px;border-radius:50%;border:none;cursor:pointer;font-size:3rem;
+    background:linear-gradient(145deg,var(--accent2),#2bb3a3);color:#06231f;
+    box-shadow:0 10px 30px rgba(74,216,200,.35);transition:.15s;display:flex;align-items:center;justify-content:center}
+  .recbtn:active{transform:scale(.95)}
+  .recbtn.recording{background:linear-gradient(145deg,var(--bad),#e23d57);color:#fff;animation:recpulse 1s infinite}
+  .recbtn.analyzing{opacity:.55;cursor:default;animation:none}
+  @keyframes recpulse{0%{box-shadow:0 0 0 0 rgba(255,107,129,.55)}70%{box-shadow:0 0 0 20px rgba(255,107,129,0)}100%{box-shadow:0 0 0 0 rgba(255,107,129,0)}}
+
+  .verdict{min-height:8px;text-align:center}
+  .verdict.show{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-top:4px}
+  .verdict.good{border-color:var(--good)}
+  .verdict.bad{border-color:var(--bad)}
+  .verdict .vscore{font-size:2.4rem;font-weight:700;line-height:1}
+  .verdict.good .vscore{color:var(--good)} .verdict.bad .vscore{color:#ffb24a}
+  .verdict .vscore span{font-size:1rem;color:var(--muted);font-weight:400}
+  .verdict .vmain{font-weight:600;margin:4px 0 8px}
+  .verdict .vheard{color:var(--text);font-size:.95rem}
+  .verdict .vtip{color:var(--muted);font-size:.9rem;margin-top:6px;line-height:1.4}
+  .keylink{text-align:center;margin-top:14px}
+  .keylink a{font-size:.8rem;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -121,6 +157,11 @@
         <h3>🗣️ Level 3 — Sentences</h3>
         <p>The sounds hidden inside full sentences: <em>« J'ai promené mon chat. »</em></p>
         <span class="tag" id="tag3">in context</span>
+      </div>
+      <div class="lvl" onclick="startLevel(4)">
+        <h3>🎤 Level 4 — Speak</h3>
+        <p>Now say the Level 1 words yourself. Your microphone + Google <em>Gemini</em> score how close you sound.</p>
+        <span class="tag" id="tag4">speak out loud · needs a Gemini key</span>
       </div>
     </div>
     <div id="voiceWarn" class="warn">⚠️ Speech support not detected. For best results use Chrome, Edge or Safari.</div>
@@ -154,6 +195,54 @@
     <div class="footer-row">
       <button class="btn ghost" onclick="quitToMenu()">← Menu</button>
       <button id="next" class="btn" disabled>Next →</button>
+    </div>
+  </section>
+
+  <!-- LEVEL 4 — SPEAK -->
+  <section id="pronounce" class="card" style="display:none">
+    <div class="topbar">
+      <span id="plabel"></span>
+      <span id="pcounter"></span>
+    </div>
+    <div class="progress"><i id="pbar"></i></div>
+
+    <!-- one-time Gemini key setup -->
+    <div id="keyPanel" class="keypanel" style="display:none">
+      <h3>🔑 Connect Gemini</h3>
+      <p>Level 4 listens to your microphone and asks Google <b>Gemini</b> to judge your French pronunciation.
+         Paste a Gemini API key to begin — it's stored <b>only in this browser</b> and sent straight to Google,
+         never to us. Tip: restrict the key to the Generative Language API in Google AI Studio.</p>
+      <input id="keyInput" type="password" placeholder="AIza…  (your Gemini API key)" autocomplete="off" spellcheck="false" />
+      <div class="keyrow">
+        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get a free key ↗</a>
+        <button id="keySave" class="btn">Save &amp; start</button>
+      </div>
+    </div>
+
+    <!-- practice -->
+    <div id="speakPanel" style="display:none">
+      <div class="prompt-word">
+        <div class="pw-fr" id="pwWord"></div>
+        <div class="pw-ipa" id="pwIpa"></div>
+        <div class="pw-it" id="pwTrans"></div>
+        <button id="pwHear" class="audio-btn" style="max-width:220px;margin:12px auto 0">🔊 Hear it</button>
+      </div>
+
+      <div class="recwrap">
+        <button id="recBtn" class="recbtn" title="Record your voice">🎤</button>
+        <div id="recHint" class="hint">Tap, say the word clearly, then tap again to stop.</div>
+      </div>
+
+      <div id="verdict" class="verdict"></div>
+
+      <div class="footer-row">
+        <button class="btn ghost" onclick="quitToMenu()">← Menu</button>
+        <div style="display:flex;gap:10px">
+          <button id="pRetry" class="btn ghost" style="display:none">↻ Retry</button>
+          <button id="pNext" class="btn" disabled>Next →</button>
+        </div>
+      </div>
+      <div class="keylink"><a href="#" id="changeKey">⚙︎ Change Gemini key</a></div>
     </div>
   </section>
 
@@ -582,6 +671,7 @@ const QUIZ_LEN = 20;   // questions drawn at random from the (larger) pool each 
 
 function startLevel(lv){
   level = lv;
+  if(lv===4){ startSpeak(); return; }   // Level 4 has its own mic-based flow
   const src = LEVELS[lv] || LEVEL1;
   // shuffle question order, take a random subset; the spoken word of each pair
   // is chosen at render() time so it differs every round (memory can't cheat).
@@ -696,10 +786,322 @@ function finish(){
   }
 }
 
-function quitToMenu(){ speechSynthesis.cancel(); show('menu'); }
+function quitToMenu(){ speechSynthesis.cancel(); abortRecording(); show('menu'); }
 function show(id){
-  ['menu','quiz','result'].forEach(s=> document.getElementById(s).style.display = (s===id?'':'none'));
+  ['menu','quiz','pronounce','result'].forEach(s=> document.getElementById(s).style.display = (s===id?'':'none'));
   window.scrollTo(0,0);
+}
+
+/* =========================================================================
+   LEVEL 4 — SPEAK · record the user's voice and ask Gemini to grade it.
+   - Key: pasted once, kept in localStorage, sent straight to Google.
+   - Audio: captured via Web Audio and encoded to 16-bit mono WAV @16kHz
+            (a format Gemini accepts on every browser, unlike webm/opus).
+   ========================================================================= */
+const GEMINI_MODEL = 'gemini-2.5-pro';        // most capable audio model — best ear for fine vowel differences
+const SPEAK_LEN = 10;                          // words per round
+
+function geminiKey(){ return localStorage.getItem('ecoute_gemini_key') || ''; }
+function setGeminiKey(k){ localStorage.setItem('ecoute_gemini_key', k.trim()); }
+
+// build word -> IPA map from the Level-1 ipa strings ("chat /ʃa/ · chien /ʃjɛ̃/")
+function buildIpaMap(levels){
+  const m = {};
+  levels.forEach(arr=> arr.forEach(q=>{
+    (q.ipa||'').split('·').forEach(seg=>{
+      const mt = seg.trim().match(/^(.+?)\s*\/(.+)\/$/);
+      if(mt) m[mt[1].trim()] = mt[2].trim();
+    });
+  }));
+  return m;
+}
+const IPA_MAP = buildIpaMap([LEVEL1]);
+// each word keeps the minimal-pair neighbour(s) it's easily confused with, so
+// Gemini can be told exactly which vowel drift to listen for.
+const L1_WORDS = (()=>{
+  const map = new Map();
+  LEVEL1.forEach(q=> q.o.forEach((w,i)=>{
+    if(!map.has(w)) map.set(w, {w, ipa: IPA_MAP[w]||'', it: TRANS[w]||'', confusions:[]});
+    const other = q.o[q.o.length-1-i];
+    const e = map.get(w);
+    if(other && other!==w && !e.confusions.some(c=>c.w===other))
+      e.confusions.push({w:other, ipa: IPA_MAP[other]||''});
+  }));
+  return [...map.values()];
+})();
+
+let speakDeck=[], sidx=0, spassed=0, sresults=[], passedSet=new Set();
+
+function startSpeak(){
+  level = 4;
+  document.getElementById('plabel').textContent = 'Level 4 · Speak';
+  show('pronounce');
+  if(!geminiKey()){ showKeyPanel(); return; }
+  beginSpeakDeck();
+}
+
+function showKeyPanel(){
+  document.getElementById('speakPanel').style.display='none';
+  document.getElementById('keyPanel').style.display='';
+  document.getElementById('keyInput').value = geminiKey();
+  setTimeout(()=> document.getElementById('keyInput').focus(), 50);
+}
+
+document.getElementById('keySave').onclick = ()=>{
+  const k = document.getElementById('keyInput').value.trim();
+  if(!k){ document.getElementById('keyInput').focus(); return; }
+  setGeminiKey(k);
+  document.getElementById('keyPanel').style.display='none';
+  beginSpeakDeck();
+};
+document.getElementById('changeKey').onclick = (e)=>{ e.preventDefault(); abortRecording(); showKeyPanel(); };
+
+function beginSpeakDeck(){
+  document.getElementById('speakPanel').style.display='';
+  speakDeck = shuffle(L1_WORDS).slice(0, SPEAK_LEN);
+  sidx=0; spassed=0; sresults=[]; passedSet=new Set();
+  renderSpeak();
+}
+
+function renderSpeak(){
+  const item = speakDeck[sidx];
+  document.getElementById('pcounter').textContent = `Word ${sidx+1} / ${speakDeck.length} · ${spassed} ✓`;
+  document.getElementById('pbar').style.width = `${sidx/speakDeck.length*100}%`;
+  document.getElementById('pwWord').textContent = item.w;
+  document.getElementById('pwIpa').textContent = item.ipa ? `/${item.ipa}/` : '';
+  document.getElementById('pwTrans').textContent = item.it ? `🇮🇹 ${item.it}` : '';
+  const v = document.getElementById('verdict'); v.className='verdict'; v.innerHTML='';
+  document.getElementById('pNext').disabled = true;
+  document.getElementById('pNext').textContent = (sidx+1<speakDeck.length)?'Next →':'See results';
+  document.getElementById('pRetry').style.display='none';
+  setRecUI('idle');
+}
+
+document.getElementById('pwHear').onclick = ()=> speak(speakDeck[sidx].w, false);
+document.getElementById('pNext').onclick = ()=>{
+  if(sidx+1<speakDeck.length){ sidx++; renderSpeak(); } else finishSpeak();
+};
+document.getElementById('pRetry').onclick = ()=> renderSpeak();
+
+/* ---- recording (Web Audio -> WAV) ---- */
+let recState='idle', mediaStream=null, audioCtx=null, srcNode=null, procNode=null, sinkNode=null, recChunks=[], recRate=44100, autoStopTimer=null;
+const recBtn = document.getElementById('recBtn');
+
+function setRecUI(state){
+  recState = state;
+  recBtn.classList.toggle('recording', state==='recording');
+  recBtn.classList.toggle('analyzing', state==='analyzing');
+  recBtn.textContent = state==='recording' ? '⏹' : state==='analyzing' ? '⏳' : '🎤';
+  const hint = document.getElementById('recHint');
+  hint.textContent = state==='recording' ? 'Recording… tap to stop.'
+                   : state==='analyzing' ? 'Sending to Gemini…'
+                   : 'Tap, say the word clearly, then tap again to stop.';
+}
+
+recBtn.onclick = async ()=>{
+  if(recState==='idle'){
+    try{ await beginRecording(); }
+    catch(err){
+      const v=document.getElementById('verdict'); v.className='verdict show bad';
+      v.innerHTML = `<div class="vmain">🎙️ Microphone unavailable</div>
+        <div class="vtip">${escapeHtml(micErrorHint(err))}</div>`;
+      return;
+    }
+    setRecUI('recording');
+    autoStopTimer = setTimeout(()=>{ if(recState==='recording') recBtn.click(); }, 6000); // safety cap
+  } else if(recState==='recording'){
+    clearTimeout(autoStopTimer);
+    const wav = endRecording();
+    setRecUI('analyzing');
+    const item = speakDeck[sidx];
+    try{
+      const verdict = await analyzePronunciation(item, wav);
+      showVerdict(verdict);
+    }catch(err){
+      const v=document.getElementById('verdict'); v.className='verdict show bad';
+      v.innerHTML = `<div class="vmain">⚠️ Couldn't grade that</div>
+        <div class="vtip">${escapeHtml(String(err.message||err))}</div>`;
+      document.getElementById('pRetry').style.display='';
+    }
+    setRecUI('idle');
+  }
+};
+
+async function beginRecording(){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    const e = new Error('This browser/context has no microphone access.'); e.name='NotFoundError'; throw e;
+  }
+  mediaStream = await navigator.mediaDevices.getUserMedia({audio:true});
+  audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended'){ try{ await audioCtx.resume(); }catch(e){} }
+  recRate = audioCtx.sampleRate;
+  srcNode = audioCtx.createMediaStreamSource(mediaStream);
+  procNode = audioCtx.createScriptProcessor(4096,1,1);
+  sinkNode = audioCtx.createGain(); sinkNode.gain.value = 0;   // silent sink (no mic echo)
+  recChunks = [];
+  procNode.onaudioprocess = e=> recChunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+  srcNode.connect(procNode); procNode.connect(sinkNode); sinkNode.connect(audioCtx.destination);
+}
+
+function endRecording(){
+  if(procNode){ procNode.disconnect(); procNode.onaudioprocess=null; }
+  if(srcNode) srcNode.disconnect();
+  if(sinkNode) sinkNode.disconnect();
+  if(mediaStream) mediaStream.getTracks().forEach(t=>t.stop());
+  const fromRate = recRate;
+  if(audioCtx){ audioCtx.close(); audioCtx=null; }
+  const len = recChunks.reduce((s,c)=>s+c.length,0);
+  const data = new Float32Array(len);
+  let off=0; for(const c of recChunks){ data.set(c,off); off+=c.length; }
+  recChunks=[];
+  const down = downsample(data, fromRate, 16000);
+  return encodeWAV(down, 16000);
+}
+
+function abortRecording(){            // called when leaving Level 4 mid-record
+  if(recState==='idle') return;
+  clearTimeout(autoStopTimer);
+  try{ endRecording(); }catch(e){}
+  setRecUI('idle');
+}
+
+function downsample(buf, from, to){
+  if(to>=from) return buf;
+  const ratio = from/to, newLen = Math.round(buf.length/ratio), out = new Float32Array(newLen);
+  let oi=0, ii=0;
+  while(oi<newLen){
+    const next = Math.round((oi+1)*ratio); let sum=0,cnt=0;
+    for(; ii<next && ii<buf.length; ii++){ sum+=buf[ii]; cnt++; }
+    out[oi++] = cnt ? sum/cnt : 0;
+  }
+  return out;
+}
+
+function encodeWAV(samples, rate){
+  const buffer = new ArrayBuffer(44 + samples.length*2), view = new DataView(buffer);
+  const wr=(o,s)=>{ for(let i=0;i<s.length;i++) view.setUint8(o+i, s.charCodeAt(i)); };
+  wr(0,'RIFF'); view.setUint32(4,36+samples.length*2,true); wr(8,'WAVE');
+  wr(12,'fmt '); view.setUint32(16,16,true); view.setUint16(20,1,true); view.setUint16(22,1,true);
+  view.setUint32(24,rate,true); view.setUint32(28,rate*2,true); view.setUint16(32,2,true); view.setUint16(34,16,true);
+  wr(36,'data'); view.setUint32(40,samples.length*2,true);
+  let off=44;
+  for(let i=0;i<samples.length;i++,off+=2){
+    const s=Math.max(-1,Math.min(1,samples[i]));
+    view.setInt16(off, s<0 ? s*0x8000 : s*0x7FFF, true);
+  }
+  return buffer;
+}
+
+function abToBase64(buf){
+  const bytes=new Uint8Array(buf); let bin=''; const chunk=0x8000;
+  for(let i=0;i<bytes.length;i+=chunk) bin += String.fromCharCode.apply(null, bytes.subarray(i,i+chunk));
+  return btoa(bin);
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function micErrorHint(err){
+  const n = err && err.name;
+  if(n==='NotAllowedError') return 'Microphone permission was blocked. Allow mic access for this page and try again.';
+  if(n==='NotFoundError')  return 'No microphone was found on this device.';
+  if(location.protocol==='file:') return 'Browsers block the mic on file:// pages. Open this file over http(s) or localhost (e.g. the deployed site).';
+  return (err && err.message) || 'Could not start the microphone.';
+}
+
+async function analyzePronunciation(item, wavBuf){
+  const key = geminiKey();
+  if(!key) throw new Error('No Gemini key set.');
+  const word = item.w, ipa = item.ipa;
+  const conf = item.confusions || [];
+  const confLine = conf.length
+    ? `Be especially strict about the vowel. This learner already knows French but tends to produce vowels that sit BETWEEN two sounds. The neighbour word(s) most easily confused with "${word}" are ${conf.map(c=>`"${c.w}"${c.ipa?` /${c.ipa}/`:''}`).join(' and ')}. If the vowel drifts even slightly toward one of those, the word is NOT correct — name which one it leans toward.`
+    : `Be especially strict about vowel quality, nasality, lip-rounding and length.`;
+  const body = {
+    contents:[{ parts:[
+      { text:
+        `You are an expert French phonetician with a native-level ear, acting as a precise pronunciation coach. `
+        + `The learner was asked to say the single French word "${word}"${ipa?` (target IPA: /${ipa}/)`:``}. `
+        + confLine + ` `
+        + `Judge like a native listener refining an advanced learner: do not reward mere intelligibility — require the vowel to be unambiguously correct, with no foreign-accent drift. `
+        + `If the vowel is an intermediate/in-between quality, identify the two sounds it lies between. Ignore background noise, microphone quality and volume. `
+        + `If the clip is empty or unintelligible, score 0 and mark it incorrect. Respond as JSON.` },
+      { inline_data:{ mime_type:'audio/wav', data: abToBase64(wavBuf) } }
+    ]}],
+    generationConfig:{
+      temperature:0.1,
+      responseMimeType:'application/json',
+      responseSchema:{
+        type:'OBJECT',
+        properties:{
+          score:{type:'INTEGER', description:'0-100, weighted heavily on exact vowel accuracy, not just intelligibility'},
+          correct:{type:'BOOLEAN', description:'true ONLY if a native would unambiguously hear the target word with no vowel drift'},
+          heard:{type:'STRING', description:'the closest real French word(s) it actually sounded like, or its IPA'},
+          leansToward:{type:'STRING', description:'if the vowel sits between the target and another sound, name that word/sound; otherwise empty string'},
+          feedback:{type:'STRING', description:'one concrete articulatory tip (tongue height/position, lip rounding, nasality) in English, max 30 words'}
+        },
+        required:['score','correct','heard','leansToward','feedback']
+      }
+    }
+  };
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(key)}`;
+  let res;
+  try{ res = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); }
+  catch(e){ throw new Error('Network error reaching Gemini.'); }
+  if(!res.ok){
+    let detail=''; try{ const j=await res.json(); detail = j?.error?.message || ''; }catch(e){}
+    if(res.status===400 && /API key/i.test(detail)) throw new Error('Invalid API key. Use ⚙︎ Change Gemini key.');
+    if(res.status===403) throw new Error('Key rejected (403). Enable the Generative Language API for it.');
+    if(res.status===429) throw new Error('Rate limit reached (429). Wait a moment and retry.');
+    throw new Error(`Gemini error ${res.status}${detail?': '+detail.slice(0,140):''}`);
+  }
+  const j = await res.json();
+  const text = j?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if(!text) throw new Error('Empty response from Gemini.');
+  let out; try{ out = JSON.parse(text); }catch(e){ throw new Error('Could not read Gemini response.'); }
+  out.score = Math.max(0, Math.min(100, parseInt(out.score,10)||0));
+  out.correct = !!out.correct;
+  out.leansToward = (out.leansToward||'').trim();
+  return out;
+}
+
+function showVerdict(v){
+  sresults[sidx] = v;
+  if(v.correct && !passedSet.has(sidx)){ passedSet.add(sidx); spassed++; }
+  document.getElementById('pcounter').textContent = `Word ${sidx+1} / ${speakDeck.length} · ${spassed} ✓`;
+  const el = document.getElementById('verdict');
+  el.className = 'verdict show ' + (v.correct?'good':'bad');
+  el.innerHTML =
+    `<div class="vscore">${v.score}<span>/100</span></div>
+     <div class="vmain">${v.correct?'✓ Native-sounding':'✗ Vowel not quite there'}</div>
+     ${v.heard?`<div class="vheard">Sounded like: <b>${escapeHtml(v.heard)}</b></div>`:''}
+     ${v.leansToward?`<div class="vheard">Your vowel leans toward: <b>${escapeHtml(v.leansToward)}</b></div>`:''}
+     ${v.feedback?`<div class="vtip">💡 ${escapeHtml(v.feedback)}</div>`:''}`;
+  document.getElementById('pNext').disabled = false;
+  document.getElementById('pRetry').style.display='';
+}
+
+function finishSpeak(){
+  abortRecording();
+  show('result');
+  document.getElementById('bar').style.width='100%';
+  document.getElementById('finalScore').textContent = `${spassed} / ${speakDeck.length}`;
+  const pct = spassed/speakDeck.length;
+  let msg = pct===1 ? "Bravo ! Every word came through clearly. 🎙️🇫🇷"
+          : pct>=.7 ? "Très bien ! Most of your words were spot on."
+          : pct>=.4 ? "Pas mal ! Replay the reference and mimic it closely."
+          : "Bon courage ! Listen to each word first, then copy its rhythm and vowels.";
+  document.getElementById('resultMsg').textContent = msg;
+
+  const ml = document.getElementById('missedList');
+  const rows = speakDeck.map((it,i)=>({it, v:sresults[i], i})).filter(r=>!passedSet.has(r.i));
+  if(rows.length){
+    ml.innerHTML = `<p style="color:var(--muted);margin:0 0 8px">Words to practise:</p>` +
+      rows.map(r=>`<div style="padding:8px 12px;background:var(--card2);border-radius:10px;margin-bottom:6px">
+        <span style="color:var(--accent2)">${r.it.w}</span>${r.it.ipa?` <span style="color:var(--muted)">/${r.it.ipa}/</span>`:''}${r.it.it?` <span style="color:var(--muted);font-style:italic">— 🇮🇹 ${r.it.it}</span>`:''}
+        ${r.v&&r.v.feedback?`<br><span style="color:var(--muted);font-size:.85rem">💡 ${escapeHtml(r.v.feedback)}</span>`:''}</div>`).join('');
+  } else {
+    ml.innerHTML = `<p style="color:var(--good);text-align:center">Perfect pronunciation — nothing to practise! 🎉</p>`;
+  }
 }
 
 // keyboard: space replays, 1/2/3 choose
