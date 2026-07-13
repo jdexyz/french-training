@@ -16,15 +16,15 @@ const lesson = await import('../js/lesson.js');
 const { S } = await import('../js/state.js');
 
 const {
-  LESSONS, LAW_CHAPTERS, LAW_AFTER, PATH, ROMAN, LAW_SENTENCES_LEN,
-  SESSION_LEN, SPEAK_STEP_LEN, PASS_MARK,
+  LESSONS, CHAPTERS, CHAPTER_AFTER, PATH,
+  SESSION_LEN, SPEAK_STEP_LEN,
   speakItemsFor, buildLessonDeck, poolTier, tierFor,
   defaultProgress, loadProgress, saveProgress, setProgress,
-  lp, lawRec, stepPassed, lessonDone, lessonMastered, lawDone, nextStep,
-  doneCount, currentIdx, lawUnlocked, liveStreak, bumpStreak, todayStr, yesterdayStr,
+  lp, chapterRec, stepPassed, lessonDone, lessonMastered, chapterDone, nextStep,
+  doneCount, currentIdx, chapterUnlocked, liveStreak, bumpStreak, todayStr, yesterdayStr,
 } = { ...course, ...(await import('../js/util.js')) };
-const { LAW_SENTENCES } = await import('../js/data.js');
-const { startLesson, startLawLesson, finishLesson, finishCourseSpeak, recordAnswer } = lesson;
+const { LAW_SENTENCES, OFFICE_SENTENCES } = await import('../js/data.js');
+const { startLesson, startChapter, finishLesson, finishCourseSpeak, recordAnswer } = lesson;
 
 const t = suite('course engine');
 const P = () => course.P;                       // live binding: re-read after a reset
@@ -46,12 +46,22 @@ const clearSpeak = (i, frac = 1) => {
 };
 
 t.section('the path');
-t.eq(LESSONS.length, 17, '17 sound lessons');
-t.eq(LAW_CHAPTERS.length, 4, 'law sentences split into 4 chapters');
-t.eq(LAW_CHAPTERS.reduce((s, c) => s + c.length, 0), LAW_SENTENCES.length, 'no law sentence lost in the split');
-t.eq(PATH.filter((x) => x.type === 'sound').length, 17, 'path holds every sound');
-t.eq(PATH.filter((x) => x.type === 'law').length, 4, 'path holds every law chapter');
-t.note('path: ' + PATH.map((x) => (x.type === 'law' ? `[LAW ${ROMAN[x.c]}]` : x.i + 1)).join(' '));
+t.eq(LESSONS.length, 30, '30 sound lessons');
+t.eq(PATH.filter((x) => x.type === 'sound').length, LESSONS.length, 'path holds every sound');
+t.eq(PATH.filter((x) => x.type === 'chapter').length, CHAPTERS.length, 'path holds every spoken chapter');
+t.eq(CHAPTERS.reduce((s, c) => s + c.items.length, 0), LAW_SENTENCES.length + OFFICE_SENTENCES.length,
+  'no sentence lost when the two banks are cut into chapters');
+t.ok(CHAPTERS.some((c) => c.kind === 'law'), 'the ⚖️ law track exists');
+t.ok(CHAPTERS.some((c) => c.kind === 'office'), 'the 💼 office track exists');
+// the two tracks must alternate, not clump
+const kinds = CHAPTERS.map((c) => c.kind);
+t.ok(kinds.slice(0, 8).every((k, i) => k === (i % 2 ? 'office' : 'law')), 'the tracks alternate down the path');
+// a chapter roughly every couple of lessons, and never more than 2 apart at the start
+const gaps = CHAPTER_AFTER.map((a, i) => a - (CHAPTER_AFTER[i - 1] ?? 0));
+t.ok(Math.max(...gaps) <= 2, `never more than 2 lessons without a spoken chapter (max gap ${Math.max(...gaps)})`);
+t.ok(CHAPTER_AFTER[0] <= 2, `the first chapter opens after ${CHAPTER_AFTER[0]} sounds`);
+t.note(`${CHAPTERS.filter((c) => c.kind === 'law').length} law + ${CHAPTERS.filter((c) => c.kind === 'office').length} office chapters over ${LESSONS.length} sounds`);
+t.note('path: ' + PATH.map((x) => (x.type === 'chapter' ? (CHAPTERS[x.c].kind === 'law' ? '[⚖]' : '[💼]') : x.i + 1)).join(' '));
 
 t.section('every exercise lands in some step');
 t.ok(LESSONS.every((L) => L.stepA && L.stepA.length), 'every lesson has a step-1 pool');
@@ -128,25 +138,24 @@ t.ok(!lessonMastered(LESSONS[0]), '50% on the mic does not master the sound');
 t.ok(lessonDone(LESSONS[0]), 'but the lesson stays cleared');
 t.eq(currentIdx(), 1, 'and the next lesson stays unlocked');
 
-t.section('law chapters unlock alongside, and never gate a sound');
+t.section('spoken chapters unlock alongside, and never gate a sound');
 fresh();
-t.ok(!lawUnlocked(0), 'law I locked at the start');
-t.eq(LAW_AFTER[0], 5, 'law I appears after 5 sounds');
-for (let i = 0; i < 5; i++) clearListening(i);
-t.ok(lawUnlocked(0), 'law I unlocked');
-t.ok(!lawUnlocked(1), 'law II still locked');
-t.eq(currentIdx(), 5, 'lesson 6 available even though law I is untouched');
-clearListening(5);
-t.eq(currentIdx(), 6, 'skipping the law chapter does not stall the path');
+t.ok(!chapterUnlocked(0), 'chapter I locked at the start');
+const n0 = CHAPTER_AFTER[0];
+for (let i = 0; i < n0; i++) clearListening(i);
+t.ok(chapterUnlocked(0), `chapter I unlocked after ${n0} sounds`);
+t.eq(currentIdx(), n0, 'the next sound is available even though the chapter is untouched');
+clearListening(n0);
+t.eq(currentIdx(), n0 + 1, 'skipping a spoken chapter does not stall the path');
 const g1 = P().gelato;
-S.courseCtx = { type: 'law', chapter: 0 };
-S.speakDeck = LAW_CHAPTERS[0].slice();
+S.courseCtx = { type: 'chapter', chapter: 0 };
+S.speakDeck = CHAPTERS[0].items.slice();
 S.spassed = S.speakDeck.length;
 finishCourseSpeak();
 S.courseCtx = null;
-t.ok(lawDone(0), 'law I cleared');
-t.eq(lawRec(0).best, 100, 'best recorded');
-t.ok(P().gelato > g1, `law chapter pays gelato: +${P().gelato - g1}`);
+t.ok(chapterDone(0), 'chapter I cleared');
+t.eq(chapterRec(0).best, 100, 'best recorded');
+t.ok(P().gelato > g1, `a spoken chapter pays gelato: +${P().gelato - g1}`);
 
 t.section('spaced review');
 fresh();
@@ -233,7 +242,7 @@ S.mode = 'free';
 startLesson(6, 1);
 t.eq(S.mode, 'free', 'startLesson on a locked lesson is a no-op');
 S.courseCtx = null;
-startLawLesson(3);
-t.ok(!S.courseCtx, 'startLawLesson on a locked chapter is a no-op');
+startChapter(CHAPTERS.length - 1);
+t.ok(!S.courseCtx, 'startChapter on a locked chapter is a no-op');
 
 t.done();

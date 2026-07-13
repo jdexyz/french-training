@@ -9,11 +9,11 @@ import { TRANS } from './data.js';
 import { shuffle, escapeHtml } from './util.js';
 import { geminiKey } from './gemini.js';
 import {
-  LESSONS, LAW_CHAPTERS, ROMAN, speakItemsFor,
+  LESSONS, CHAPTERS, speakItemsFor,
   PASS_MARK, SPEAK_PASS, SPEAK_STEP_LEN,
-  P, saveProgress, lp, lawRec, stepPassed, lessonDone, lessonMastered, lawDone,
+  P, saveProgress, lp, chapterRec, stepPassed, lessonDone, lessonMastered, chapterDone,
   nextStep, doneCount, currentIdx, weakestIdx, bumpStreak, buildLessonDeck,
-  liveStreak, lawUnlocked,
+  liveStreak, chapterUnlocked,
 } from './course.js';
 import { show, render } from './quiz.js';
 import { renderSpeak, showKeyPanel } from './speak.js';
@@ -50,12 +50,12 @@ function startSpeakStep(i){
   beginCourseSpeakDeck();
 }
 
-function startLawLesson(c){
-  if(!lawUnlocked(c)) return;
+function startChapter(c){
+  if(!chapterUnlocked(c)) return;
   S.mode = 'lesson'; S.lessonStep = 0; S.level = 5;
-  S.courseCtx = { type:'law', chapter:c };
+  S.courseCtx = { type:'chapter', chapter:c };
   S.speakMode = 'sentences';
-  document.getElementById('plabel').textContent = `⚖️ Law aloud ${ROMAN[c]}`;
+  document.getElementById('plabel').textContent = CHAPTERS[c].title;
   show('pronounce');
   if(!geminiKey()){ showKeyPanel(); return; }
   beginCourseSpeakDeck();
@@ -65,8 +65,8 @@ function beginCourseSpeakDeck(){
   document.getElementById('keyPanel').style.display = 'none';
   document.getElementById('sentencePanel').style.display = 'none';
   document.getElementById('speakPanel').style.display = '';
-  S.speakDeck = (S.courseCtx.type === 'law')
-    ? LAW_CHAPTERS[S.courseCtx.chapter].slice()
+  S.speakDeck = (S.courseCtx.type === 'chapter')
+    ? CHAPTERS[S.courseCtx.chapter].items.slice()
     : shuffle(speakItemsFor(LESSONS[S.courseCtx.lesson])).slice(0, SPEAK_STEP_LEN);
   S.sidx = 0; S.spassed = 0; S.sresults = []; S.passedSet = new Set();
   renderSpeak();
@@ -185,10 +185,11 @@ function finishCourseSpeak(){
   const pct = S.speakDeck.length ? S.spassed/S.speakDeck.length : 0;
   const passed = pct >= SPEAK_PASS;
 
-  if(S.courseCtx.type === 'law'){
+  if(S.courseCtx.type === 'chapter'){
     const c = S.courseCtx.chapter;
-    const rec = lawRec(c);
-    const first = passed && !lawDone(c);
+    const ch = CHAPTERS[c];
+    const rec = chapterRec(c);
+    const first = passed && !chapterDone(c);
     if(passed) rec.best = Math.max(rec.best, Math.round(pct*100));
     const gelato = S.spassed*20 + (passed ? 100 : 0);
     P.gelato += gelato;
@@ -197,21 +198,27 @@ function finishCourseSpeak(){
 
     document.getElementById('finalScore').textContent = `${S.spassed} / ${S.speakDeck.length}`;
     document.getElementById('resultMsg').textContent = passed
-      ? `Chapter cleared. Reading legal French aloud is the hardest thing in this app.`
+      ? (ch.kind === 'law'
+          ? `Chapter cleared. Reading legal French aloud is the hardest thing in this app.`
+          : `Chapter cleared. That is the French you'll actually speak all day.`)
       : `You need ${Math.round(SPEAK_PASS*100)}% of the sentences to pass. Hear each one first, then copy its rhythm.`;
     document.getElementById('resultRemy').style.display = '';
     document.getElementById('resultRemyLine').innerHTML = passed
-      ? (first ? `<b>Maître du barreau !</b> ⚖️ Chapter ${ROMAN[c]} is yours.` : `<b>Toujours net.</b> Nothing has slipped.`)
+      ? (first
+          ? (ch.kind === 'law'
+              ? `<b>Maître du barreau !</b> ${escapeHtml(ch.title)} is yours.`
+              : `<b>Comme au bureau !</b> ${escapeHtml(ch.title)} is yours — that's a real working day.`)
+          : `<b>Toujours net.</b> Nothing has slipped.`)
       : `<b>Courage !</b> Long sentences are a marathon. Écoute, puis répète.`;
     document.getElementById('resultStats').innerHTML =
       `<span class="stat">+${gelato} 🍨</span>` +
       `<span class="stat${liveStreak()?' hot':''}">🔥 ${liveStreak()} day${liveStreak()===1?'':'s'}${grew?' · +1':''}</span>` +
-      `<span class="stat">⚖️ ${LAW_CHAPTERS.filter((_,x)=>lawDone(x)).length} / ${LAW_CHAPTERS.length}</span>`;
+      `<span class="stat">🗣️ ${CHAPTERS.filter((_,x)=>chapterDone(x)).length} / ${CHAPTERS.length}</span>`;
 
     const retry = document.getElementById('retryBtn');
     retry.className = passed ? 'btn ghost' : 'btn';
     retry.textContent = passed ? 'Repeat chapter' : 'Try again';
-    retry.onclick = ()=> startLawLesson(c);
+    retry.onclick = ()=> startChapter(c);
 
     const next = document.getElementById('nextLessonBtn');
     const cur = currentIdx();
@@ -241,6 +248,6 @@ function finishCourseSpeak(){
 }
 
 export {
-  STEP_NAME, startLesson, startSpeakStep, startLawLesson, beginCourseSpeakDeck,
+  STEP_NAME, startLesson, startSpeakStep, startChapter, beginCourseSpeakDeck,
   recordAnswer, settleStep, finishLesson, nextStepAfter, finishCourseSpeak,
 };

@@ -4,12 +4,12 @@ import { S } from './state.js';
 import { escapeHtml, todayStr } from './util.js';
 import { geminiKey } from './gemini.js';
 import {
-  LESSONS, PATH, LAW_CHAPTERS, LAW_AFTER, ROMAN,
-  P, defaultProgress, setProgress, saveProgress, lp, lawRec,
-  stepPassed, lessonDone, lessonMastered, lawDone, nextStep,
-  doneCount, masteredCount, currentIdx, lawUnlocked, weakestIdx, liveStreak,
+  LESSONS, PATH, CHAPTERS, CHAPTER_AFTER,
+  P, defaultProgress, setProgress, saveProgress, lp, chapterRec,
+  stepPassed, lessonDone, lessonMastered, chapterDone, nextStep,
+  doneCount, masteredCount, currentIdx, chapterUnlocked, weakestIdx, liveStreak,
 } from './course.js';
-import { STEP_NAME, startLesson, startLawLesson } from './lesson.js';
+import { STEP_NAME, startLesson, startChapter } from './lesson.js';
 
 /* ---- the menu: Rémy, the stats, the path ---- */
 function remyLine(allDone, cur, streak){
@@ -57,10 +57,10 @@ function renderCourse(){
   const cb = document.getElementById('continueBtn');
   if(allDone){
     const w = weakestIdx();
-    const openLaw = LAW_CHAPTERS.findIndex((_,c)=> lawUnlocked(c) && !lawDone(c));
-    if(openLaw >= 0){
-      cb.textContent = `▶ Continue · ⚖️ Law aloud ${ROMAN[openLaw]}`;
-      cb.onclick = ()=> startLawLesson(openLaw);
+    const openCh = CHAPTERS.findIndex((_,c)=> chapterUnlocked(c) && !chapterDone(c));
+    if(openCh >= 0){
+      cb.textContent = `▶ Continue · ${CHAPTERS[openCh].title}`;
+      cb.onclick = ()=> startChapter(openCh);
     } else {
       cb.textContent = `🎓 Course complete — review ${LESSONS[w].title}`;
       cb.onclick = ()=> startLesson(w, 1);
@@ -75,24 +75,25 @@ function renderCourse(){
   path.innerHTML = '';
 
   PATH.forEach((node)=>{
-    if(node.type === 'law'){
+    if(node.type === 'chapter'){
       const c = node.c;
-      const locked = !lawUnlocked(c);
-      const done = lawDone(c);
+      const ch = CHAPTERS[c];
+      const locked = !chapterUnlocked(c);
+      const done = chapterDone(c);
       const b = document.createElement('button');
       b.className = 'node law' + (done ? ' done' : '');
       b.disabled = locked;
       b.innerHTML =
-        `<span class="dot">${done ? '✓' : locked ? '🔒' : '⚖️'}</span>
+        `<span class="dot">${done ? '✓' : locked ? '🔒' : ch.icon}</span>
          <span class="nt">
-           <b>⚖️ Law aloud ${ROMAN[c]}</b>
-           <span>${LAW_CHAPTERS[c].length} sentences aloud · ${
-             done ? `best ${lawRec(c).best}%`
-                  : locked ? `unlocks after ${LAW_AFTER[c]} sounds`
+           <b>${escapeHtml(ch.title)}</b>
+           <span>${ch.items.length} sentences aloud · ${
+             done ? `best ${chapterRec(c).best}%`
+                  : locked ? `unlocks after ${CHAPTER_AFTER[c]} sounds`
                   : geminiKey() ? 'optional · +100 🍨'
                   : 'optional · needs a Gemini key'}</span>
          </span>`;
-      if(!locked) b.onclick = ()=> startLawLesson(c);
+      if(!locked) b.onclick = ()=> startChapter(c);
       path.appendChild(b);
       return;
     }

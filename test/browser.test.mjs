@@ -81,7 +81,7 @@ async function playSpeak() {
 }
 
 t.section('the menu');
-t.eq(await page.locator('.node').count(), 21, '17 sounds + 4 law chapters in the path');
+t.eq(await page.locator('.node').count(), 50, '30 sounds + 20 spoken chapters in the path');
 t.eq(await page.locator('.node:not([disabled])').count(), 1, 'only lesson 1 is open at the start');
 t.eq(await page.locator('.node').first().locator('.pip').count(), 3, 'lesson 1 shows three steps');
 t.ok((await page.locator('#continueBtn').innerText()).includes('👂 Words'), 'Continue points at step 1');
@@ -120,19 +120,22 @@ await page.waitForSelector('#menu:visible');
 t.ok((await page.locator('.node').first().getAttribute('class')).includes('gold'), 'lesson 1 is gold on the path');
 t.eq(await page.locator('.node').first().locator('.pip.on').count(), 3, 'all three pips lit');
 
-t.section('law chapters unlock alongside, and never gate a sound');
-const law = page.locator('.node.law').first();
-t.ok(await law.isDisabled(), 'law I is locked before 5 sounds');
+t.section('spoken chapters unlock alongside, and never gate a sound');
+const chapter = page.locator('.node.law').first();
+t.ok(await chapter.isDisabled(), 'the first chapter is locked at the start');
 await page.evaluate(() => {
   const { lp, LESSONS, saveProgress, renderCourse } = __ecoute;
-  for (let i = 0; i < 5; i++) { const r = lp(LESSONS[i].key); r.s1 = 100; r.s2 = 100; r.strength = 2; }
+  for (let i = 0; i < 2; i++) { const r = lp(LESSONS[i].key); r.s1 = 100; r.s2 = 100; r.strength = 2; }
   saveProgress(); renderCourse();
 });
-t.ok(!(await law.isDisabled()), 'law I opens once 5 sounds are cleared');
-t.ok(await page.evaluate(() => __ecoute.currentIdx() === 5), 'and lesson 6 is reachable with law I untouched');
-await law.click();
+t.ok(!(await chapter.isDisabled()), 'it opens after only 2 sounds');
+t.ok(await page.evaluate(() => __ecoute.currentIdx() === 2), 'and lesson 3 is reachable with the chapter untouched');
+t.ok((await chapter.innerText()).includes('⚖️'), 'the first chapter is a law one');
+const office = page.locator('.node.law').nth(1);
+t.ok((await office.innerText()).includes('💼'), 'the second is an Au bureau one — the tracks alternate');
+await chapter.click();
 await page.waitForSelector('#pronounce:visible');
-t.eq(await page.evaluate(() => __ecoute.S.speakDeck.length), 5, 'law I holds 5 sentences');
+t.eq(await page.evaluate(() => __ecoute.S.speakDeck.length), 5, 'a chapter holds 5 sentences');
 await page.locator('#pronounce .btn.ghost').first().click();
 
 t.section('the free levels still work, untouched by the course');

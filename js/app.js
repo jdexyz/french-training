@@ -11,7 +11,7 @@ import { speak } from './audio.js';
 import { todayStr } from './util.js';
 import {
   P, saveProgress, liveStreak, setOnPractised,
-  LESSONS, lp, currentIdx, lessonDone, lessonMastered, lawUnlocked,
+  LESSONS, lp, currentIdx, lessonDone, lessonMastered, chapterUnlocked,
 } from './course.js';
 import { startLevel, quitToMenu, finish } from './quiz.js';
 import { renderCourse } from './menu.js';
@@ -69,7 +69,7 @@ window.addEventListener('load', async ()=>{
      from the network. That catches a deploy that only touched the HTML, which
      leaves sw.js byte-identical and so raises no update event at all.
    ========================================================================= */
-const APP_VERSION = '2.0.0';
+const APP_VERSION = '2.1.0';
 let waitingWorker = null, updateRequested = false, reloading = false;
 
 document.getElementById('updVer').textContent = 'Écoute v' + APP_VERSION;
@@ -352,6 +352,6 @@ setOnPractised(notifyPracticed);
    uses this object. */
 window.__ecoute = {
   S, LESSONS, lp, saveProgress, renderCourse,
-  currentIdx, lessonDone, lessonMastered, lawUnlocked, finish,
+  currentIdx, lessonDone, lessonMastered, chapterUnlocked, finish,
   get P(){ return P; },
 };

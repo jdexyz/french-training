@@ -9,15 +9,22 @@ It's an installable PWA: add it to an Android or desktop home screen and it runs
 fullscreen, offline, and can send you a daily reminder. **Rémy** — moustache,
 curly hair — is your coach.
 
-The app itself is still one self-contained file, `french-sounds.html`. The only
-server-side code is the handful of Netlify functions that deliver the reminders.
+No build step: the browser loads the ES modules in `js/` directly, nothing is
+compiled or bundled. The only server-side code is the handful of Netlify functions
+that deliver the reminders.
 
 ## Rémy's course
 
 The course is the main way in, and every level feeds it. It turns the exercise
-pools into **17 lessons, one per sound contrast**, ordered easiest-first: the oral
-vowels (*chat / chaud*, *tout / tu*) before the nasals (*bon / banc*, *vin / vent*),
-which are the ones that stay hard longest.
+pools into **30 lessons, one per sound contrast**, ordered easiest-first:
+
+1. **Oral vowels** — *chat / chaud*, *tout / tu*, *peu / peau*, the open-vs-closed
+   *saute / sotte*, and the schwa that separates *le* from *les*.
+2. **Consonants** — the voicing pairs (*pain / bain*, *tout / doux*, *car / gare*,
+   *fou / vous*), the sibilants (*chou / joue*, *sous / chou*), and the French R
+   against L (*rire / lire*).
+3. **Nasals**, last — *sa / sans*, *beau / bon*, *vin / vent*, *loi / loin*. They
+   stay hard longest and they lean on the oral vowels underneath.
 
 ### Each lesson runs in steps
 
@@ -36,12 +43,21 @@ someone who doesn't have one, so the mic never gates progress. Clear it and the
 sound is **mastered** (★, gold) and pays extra gelato. Fail it and you lose
 nothing.
 
-### ⚖️ Law aloud
+### The spoken chapters — ⚖️ and 💼
 
-Level 5's sentences become **four chapters** slotted into the path, one unlocking
-every five sounds. Like the mic step they're optional and need a key — they unlock
-*alongside* the sounds rather than blocking them, so an ignored chapter never
-stalls the course.
+Between the sounds sit **20 read-aloud chapters of 5 sentences**, graded word by
+word. Two tracks, alternating, because someone landing in a Paris firm needs both
+and only one of them gets taught anywhere:
+
+- **⚖️ Law aloud** (12 chapters, 60 sentences) — *« Le juge d'instruction ouvre une
+  enquête préliminaire. »*
+- **💼 Au bureau** (8 chapters, 40 sentences) — the language of the working day, which
+  is the half the textbooks skip: *« Pourriez-vous me transférer l'appel ? »*,
+  *« L'imprimante est en panne. »*, *« Je prends un café, vous en voulez un ? »*
+
+One lands roughly every two lessons and they unlock *alongside* the sounds rather
+than blocking them — like the 🎤 step they need a Gemini key, so an ignored chapter
+can never stall the course.
 
 Level 6 (*your own sentence*) stays a free tool: it's inherently freeform, not a
 course unit.
@@ -69,7 +85,8 @@ menu: pick any level and drill it outside the course.
 - **Level 3 — Sentences.** The sounds hidden in full sentences.
 - **Level 4 — Speak.** Say the Level 1 words; your mic + Gemini score you.
 - **Level 5 — Law aloud.** Read sentences about French/European law, graded word
-  by word.
+  by word. (The course also draws on the 💼 *Au bureau* bank; free practice uses
+  the legal one.)
 - **Level 6 — Your sentence.** Type any French sentence and train on it.
 
 Levels 4–6 need your own [Gemini API key](https://aistudio.google.com/apikey).
@@ -149,7 +166,7 @@ it on its own. There are two ways it gets there:
   the worker to re-fetch the shell straight from the network, past every cache.
 
 **Bump the version in both places when you deploy** — `VERSION` in `sw.js` and
-`APP_VERSION` in `french-sounds.html`. The browser detects a new service worker by
+`APP_VERSION` in `js/app.js`. The browser detects a new service worker by
 byte-comparing `sw.js`, so a deploy that only touched the HTML leaves it identical
 and raises no update event at all. (The manual button still catches that case, but
 nobody gets the banner.)

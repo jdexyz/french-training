@@ -7,7 +7,7 @@
    Progress lives here too, because the two are inseparable — "what is lesson 6"
    and "have you cleared lesson 6" are the same question asked twice. */
 
-import { LEVEL1, LEVEL2, LEVEL3, TRANS, LAW_SENTENCES } from './data.js';
+import { LEVEL1, LEVEL2, LEVEL3, TRANS, LAW_SENTENCES, OFFICE_SENTENCES } from './data.js';
 import { shuffle, dayStr, todayStr, yesterdayStr } from './util.js';
 
 // Called when a round lands, so the reminder backend can skip tonight's nudge.
@@ -88,10 +88,16 @@ const POOLS = (()=>{
 // Teaching order: easy oral vowels first, the four nasals last — they're the
 // contrasts that stay hard longest, and they lean on the oral ones underneath.
 const COURSE_ORDER = [
+  // oral vowels — the ones an Italian ear already half-hears
   '/a/ vs /o/', '/i/ vs /e/', '/e/ vs /ɛ/', '/u/ vs /o/', '/u/ vs /y/',
-  '/i/ vs /y/', '/ø/ vs /o/', '/u/ vs /ø/', '/œ/ vs /ø/', '/s/ vs /z/',
-  '/a/ vs /ɑ̃/', '/o/ vs /ɔ̃/', '/ɛ̃/ vs /ɔ̃/', '/ɔ̃/ vs /ɑ̃/', '/ɛ̃/ vs /ɑ̃/',
-  '/i/ vs /ɑ̃/', '/a/ vs /jɛ̃/',
+  '/i/ vs /y/', '/ø/ vs /o/', '/u/ vs /ø/', '/œ/ vs /ø/',
+  '/o/ vs /ɔ/', '/ə/ vs /e/', '/ə/ vs /ø/',
+  // consonants — voicing first, then the sibilants, then R against L
+  '/p/ vs /b/', '/t/ vs /d/', '/k/ vs /g/', '/f/ vs /v/',
+  '/s/ vs /z/', '/ʃ/ vs /ʒ/', '/s/ vs /ʃ/', '/m/ vs /n/', '/ʁ/ vs /l/',
+  // nasals last: they stay hard longest, and they lean on the oral vowels below
+  '/a/ vs /ɑ̃/', '/o/ vs /ɔ̃/', '/ɛ/ vs /ɛ̃/', '/ɛ̃/ vs /ɔ̃/', '/ɔ̃/ vs /ɑ̃/',
+  '/ɛ̃/ vs /ɑ̃/', '/wa/ vs /wɛ̃/', '/i/ vs /ɑ̃/', '/a/ vs /jɛ̃/',
 ];
 
 /* Each sound lesson runs in up to three steps:
@@ -135,24 +141,53 @@ function speakItemsFor(L){
   return [...map.values()];
 }
 
-/* The ⚖️ law-aloud chapters (Level 5's material), split into short sets and
-   dropped into the path after every 5th sound. They unlock alongside the sounds
-   rather than gating them — they need a Gemini key too. */
-const LAW_CHAPTERS = (()=>{
-  const size = 5, out = [];
-  for(let i=0;i<LAW_SENTENCES.length;i+=size) out.push(LAW_SENTENCES.slice(i, i+size));
-  return out;
-})();
-const ROMAN = ['I','II','III','IV','V','VI'];
-// chapter c appears once this many sound lessons are cleared
-const LAW_AFTER = LAW_CHAPTERS.map((_,c)=> Math.min(LESSONS.length, (c+1)*5));
+/* The spoken chapters — the other half of the course.
 
-// The path the learner actually sees: sounds, with law chapters slotted in.
+   Two tracks, because a lawyer arriving in a Paris firm needs both and only one
+   of them is taught anywhere: ⚖️ the language of the law, and 💼 the language of
+   the working day (the phone, the deadline, the printer, the coffee).
+
+   They alternate down the path and unlock alongside the sounds, roughly one
+   every two lessons. Like the 🎤 step they need a Gemini key, so they never gate
+   a sound — an ignored chapter can't stall the course. */
+const CHAPTER_LEN = 5;
+
+function chaptersOf(sentences, kind, icon, name){
+  const out = [];
+  for(let i=0; i<sentences.length; i+=CHAPTER_LEN)
+    out.push({ kind, icon, name, items: sentences.slice(i, i+CHAPTER_LEN) });
+  return out;
+}
+
+const ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV'];
+
+const CHAPTERS = (()=>{
+  const law = chaptersOf(LAW_SENTENCES, 'law', '⚖️', 'Law aloud');
+  const office = chaptersOf(OFFICE_SENTENCES, 'office', '💼', 'Au bureau');
+  // interleave, so you never read six legal texts in a row
+  const out = [];
+  for(let i=0; i<Math.max(law.length, office.length); i++){
+    if(law[i]) out.push(law[i]);
+    if(office[i]) out.push(office[i]);
+  }
+  return out.map((c, i)=>{
+    const nth = out.slice(0, i+1).filter(x=>x.kind === c.kind).length;
+    return { ...c, title: `${c.icon} ${c.name} ${ROMAN[nth-1] || nth}` };
+  });
+})();
+
+// Spread the chapters evenly across the sounds rather than piling the leftovers
+// at the end: with 29 lessons and 20 chapters that lands one every ~1.5 lessons.
+const CHAPTER_AFTER = CHAPTERS.map((_, c)=>
+  Math.min(LESSONS.length, Math.max(1, Math.ceil((c + 1) * LESSONS.length / CHAPTERS.length))));
+
+// The path the learner actually sees: the sounds, with the spoken chapters
+// slotted in between them.
 const PATH = (()=>{
   const nodes = [];
-  LESSONS.forEach((L,i)=>{
+  LESSONS.forEach((L, i)=>{
     nodes.push({ type:'sound', i });
-    LAW_AFTER.forEach((after, c)=>{ if(after === i+1) nodes.push({ type:'law', c }); });
+    CHAPTER_AFTER.forEach((after, c)=>{ if(after === i+1) nodes.push({ type:'chapter', c }); });
   });
   return nodes;
 })();
@@ -167,7 +202,7 @@ const PKEY = 'ecoute_progress_v1';
 // A factory, not a shared constant: `lessons` must be a fresh object every time,
 // or lp() would write the learner's records into the defaults themselves.
 function defaultProgress(){
-  return { v:2, gelato:0, streak:0, bestStreak:0, lastDay:null, lessons:{}, law:{}, hour:19, push:false };
+  return { v:3, gelato:0, streak:0, bestStreak:0, lastDay:null, lessons:{}, chapters:{}, hour:19, push:false };
 }
 export let P = loadProgress();
 
@@ -176,7 +211,7 @@ function loadProgress(){
   try{ raw = JSON.parse(localStorage.getItem(PKEY) || '{}') || {}; }catch(e){}
   const p = Object.assign(defaultProgress(), raw);
   p.lessons = Object.assign({}, raw.lessons || {});
-  p.law = Object.assign({}, raw.law || {});
+  p.chapters = Object.assign({}, raw.chapters || {});
   return p;
 }
 // Reset and the tests need to swap the whole object; an imported binding can't
@@ -195,7 +230,7 @@ function lp(key){
   if(r.s1 === undefined){ r.s1 = r.done ? (r.best||PASS_MARK*100) : 0; r.s2 = 0; r.sp = 0; }
   return r;
 }
-function lawRec(c){ return P.law[c] || (P.law[c] = {best:0}); }
+function chapterRec(c){ return P.chapters[c] || (P.chapters[c] = {best:0}); }
 
 function stepPassed(L, step){
   const r = lp(L.key);
@@ -207,7 +242,7 @@ function stepPassed(L, step){
 function lessonDone(L){ return stepPassed(L,1) && stepPassed(L,2); }
 // "mastered" = done, and you can say it too.
 function lessonMastered(L){ return lessonDone(L) && stepPassed(L,3); }
-function lawDone(c){ return lawRec(c).best >= SPEAK_PASS*100; }
+function chapterDone(c){ return chapterRec(c).best >= SPEAK_PASS*100; }
 
 // The next step of a lesson that still needs doing (0 if the lesson is fully done).
 function nextStep(L){
@@ -223,7 +258,7 @@ function currentIdx(){
   for(let i=0;i<LESSONS.length;i++) if(!lessonDone(LESSONS[i])) return i;
   return LESSONS.length;                                   // every sound cleared
 }
-function lawUnlocked(c){ return doneCount() >= LAW_AFTER[c]; }
+function chapterUnlocked(c){ return doneCount() >= CHAPTER_AFTER[c]; }
 function weakestIdx(){
   let at = 0, low = 99;
   LESSONS.forEach((l,i)=>{ const s = lp(l.key).strength; if(s < low){ low = s; at = i; } });
@@ -314,12 +349,12 @@ function buildLessonDeck(i, step){
 }
 
 export {
-  contrastKey, POOLS, COURSE_ORDER, LESSONS, PATH, LAW_CHAPTERS, LAW_AFTER, ROMAN,
+  contrastKey, POOLS, COURSE_ORDER, LESSONS, PATH, CHAPTERS, CHAPTER_AFTER, ROMAN,
   IPA_MAP, L1_WORDS, speakItemsFor,
   SESSION_LEN, PASS_MARK, SPEAK_PASS, SPEAK_STEP_LEN,
-  defaultProgress, loadProgress, saveProgress, setProgress, lp, lawRec,
-  stepPassed, lessonDone, lessonMastered, lawDone, nextStep,
-  doneCount, masteredCount, currentIdx, lawUnlocked, weakestIdx,
+  defaultProgress, loadProgress, saveProgress, setProgress, lp, chapterRec,
+  stepPassed, lessonDone, lessonMastered, chapterDone, nextStep,
+  doneCount, masteredCount, currentIdx, chapterUnlocked, weakestIdx,
   liveStreak, bumpStreak,
   poolTier, tierFor, drawFrom, buildLessonDeck,
 };
