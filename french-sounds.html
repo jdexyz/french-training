@@ -2,8 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Écoute · French Sound Trainer</title>
+
+<!-- Installable app (Android/desktop PWA, and the shell inside a Play Store TWA) -->
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#0f1226" />
+<meta name="description" content="Train your ear and your tongue for French sounds, lesson by lesson, with Rémy." />
+<link rel="icon" href="/remy.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Écoute" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <style>
   :root{
     --bg:#0f1226; --bg2:#171a36; --card:#1e2245; --card2:#262a55;
@@ -139,6 +150,104 @@
   .verdict .mistakes{list-style:none;margin:6px 0 0;padding:0;text-align:left}
   .verdict .mistakes li{padding:7px 12px;background:var(--bg2);border-radius:9px;margin-top:6px;font-size:.92rem}
   .verdict .mistakes li b{color:var(--bad)}
+
+  /* ===== Rémy + the course path ===== */
+  .remy-card{display:flex;gap:14px;align-items:flex-start;background:var(--card);border:1px solid var(--line);
+    border-radius:20px;padding:16px;margin-bottom:12px}
+  .remy-av{width:76px;height:76px;flex-shrink:0;border-radius:50%;background:var(--card2)}
+  .remy-av.small{width:52px;height:52px}
+  .remy-say{flex:1;min-width:0}
+  .bubble{position:relative;background:var(--card2);border:1px solid var(--line);border-radius:14px;
+    padding:11px 14px;font-size:.95rem;line-height:1.45}
+  .bubble:before{content:"";position:absolute;left:-7px;top:22px;width:12px;height:12px;background:var(--card2);
+    border-left:1px solid var(--line);border-bottom:1px solid var(--line);transform:rotate(45deg)}
+  .bubble b{color:var(--accent2)}
+  .stats{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .stat{font-size:.8rem;color:var(--muted);background:var(--bg2);border:1px solid var(--line);
+    border-radius:999px;padding:4px 10px}
+  .stat.hot{color:#ffb24a;border-color:#6b4a1f}
+
+  .cta{width:100%;padding:15px;font-size:1.05rem;border-radius:14px;margin-bottom:6px}
+  .cta.done{background:var(--card2);border:1px solid var(--line)}
+
+  .path{display:grid;gap:8px;margin:12px 0 4px}
+  .node{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);
+    border-radius:14px;padding:11px 14px;text-align:left;color:var(--text);font:inherit;cursor:pointer;transition:.12s}
+  .node:disabled{cursor:default;opacity:.5}
+  .node:not(:disabled):hover{border-color:var(--accent);transform:translateY(-1px)}
+  .node.current{border-color:var(--accent);background:var(--card2);box-shadow:0 0 0 1px var(--accent) inset}
+  .node .dot{width:34px;height:34px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:.95rem;font-weight:700;background:var(--bg2);border:1px solid var(--line)}
+  .node.done .dot{background:rgba(61,220,132,.15);border-color:var(--good);color:var(--good)}
+  .node.current .dot{background:var(--accent);border-color:var(--accent);color:#fff}
+  .node .nt{flex:1;min-width:0}
+  .node .nt b{display:block;font-size:.98rem;font-weight:600}
+  .node .nt span{display:block;font-size:.8rem;color:var(--muted);margin-top:2px}
+  .node .str{flex-shrink:0;font-size:.72rem;color:var(--accent2);letter-spacing:1px}
+  .node.gold{border-color:#d9a441}
+  .node.gold .dot{background:rgba(217,164,65,.18);border-color:#d9a441;color:#f0c877}
+  .node.law .dot{background:rgba(74,216,200,.12);border-color:var(--accent2)}
+
+  /* the 👂👂🎤 step pips on each lesson row */
+  .pips{display:flex;gap:3px;flex-shrink:0}
+  .pip{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:.66rem;font-style:normal;background:var(--bg2);border:1px solid var(--line);
+    filter:grayscale(1);opacity:.45}
+  .pip.on{filter:none;opacity:1;background:rgba(61,220,132,.15);border-color:var(--good)}
+
+  /* the step list that unfolds under a lesson */
+  .steps{display:grid;gap:6px;margin:-2px 0 4px;padding:8px 10px 10px 24px;
+    background:var(--bg2);border:1px solid var(--line);border-top:none;border-radius:0 0 14px 14px}
+  .steprow{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);
+    border-radius:11px;padding:9px 12px;text-align:left;color:var(--text);font:inherit;cursor:pointer;transition:.12s}
+  .steprow:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .steprow.done{border-color:var(--good)}
+  .steprow .sdot{width:24px;height:24px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-size:.78rem;font-weight:700;background:var(--bg2);border:1px solid var(--line)}
+  .steprow.done .sdot{background:rgba(61,220,132,.15);border-color:var(--good);color:var(--good)}
+  .steprow .snt b{display:block;font-size:.92rem;font-weight:600}
+  .steprow .snt span{display:block;font-size:.76rem;color:var(--muted);margin-top:1px}
+  .stat.gold{color:#f0c877;border-color:#d9a441}
+
+  .section-title{display:flex;justify-content:space-between;align-items:baseline;margin:22px 0 6px}
+  .section-title h2{font-size:1rem;margin:0;color:var(--muted);font-weight:600;letter-spacing:.4px;text-transform:uppercase}
+  .section-title a{font-size:.8rem}
+
+  /* reminders */
+  .rem-panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-top:12px}
+  .rem-row{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .rem-row + .rem-row{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+  .rem-sub{font-size:.82rem;color:var(--muted);margin-top:3px;line-height:1.4}
+  .rem-row select{background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:.9rem}
+  .rem-row a{font-size:.82rem}
+  .switch{position:relative;display:inline-block;width:50px;height:29px;flex-shrink:0}
+  .switch input{opacity:0;width:0;height:0}
+  .slider{position:absolute;inset:0;background:var(--bg2);border:1px solid var(--line);border-radius:999px;
+    cursor:pointer;transition:.18s}
+  .slider:before{content:"";position:absolute;width:21px;height:21px;left:3px;top:3px;background:var(--muted);
+    border-radius:50%;transition:.18s}
+  .switch input:checked + .slider{background:var(--accent);border-color:var(--accent)}
+  .switch input:checked + .slider:before{transform:translateX(21px);background:#fff}
+  .switch input:disabled + .slider{opacity:.4;cursor:not-allowed}
+
+  details.free{margin-top:8px}
+  details.free > summary{cursor:pointer;color:var(--muted);font-size:.9rem;padding:10px 0;list-style:none}
+  details.free > summary::-webkit-details-marker{display:none}
+  details.free > summary:before{content:"▸ ";color:var(--accent)}
+  details.free[open] > summary:before{content:"▾ "}
+
+  .chip{display:inline-block;font-size:.7rem;padding:2px 8px;border-radius:999px;background:#3a2a13;
+    color:#f4c98a;border:1px solid #6b4a1f;vertical-align:middle;margin-left:6px}
+  #installBtn{display:none;width:100%;margin-top:10px}
+
+  /* update banner + version footer */
+  #updBanner{display:none;align-items:center;justify-content:space-between;gap:12px;text-align:left;
+    background:#13314a;border:1px solid var(--accent);color:var(--text);margin:0 0 12px}
+  #updBanner .btn{padding:9px 16px;font-size:.9rem;flex-shrink:0}
+  .updbar{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:20px;
+    font-size:.78rem;color:var(--muted)}
+  .linkbtn{background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;padding:2px 4px}
+  .linkbtn:disabled{color:var(--muted);cursor:default}
 </style>
 </head>
 <body>
@@ -150,6 +259,60 @@
 
   <!-- MENU -->
   <section id="menu">
+
+    <div id="updBanner" class="warn">
+      <span>✨ A new version of Écoute is ready.</span>
+      <button class="btn" id="updNow">Reload</button>
+    </div>
+
+    <!-- Rémy — your coach, and the course he walks you through -->
+    <div class="remy-card">
+      <img class="remy-av" src="/remy.svg" alt="Rémy, your French coach" width="76" height="76" />
+      <div class="remy-say">
+        <div class="bubble" id="remyLine">Salut ! Je suis <b>Rémy</b>.</div>
+        <div class="stats">
+          <span class="stat" id="statStreak">🔥 0 days</span>
+          <span class="stat" id="statGelato">🍨 0 gelato</span>
+          <span class="stat" id="statDone">🎓 0 / 0 sounds</span>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn cta" id="continueBtn">▶ Start lesson 1</button>
+    <div class="path" id="path"></div>
+    <p class="small" style="margin-top:10px">
+      Each lesson drills one new contrast — and quietly slips in the sounds you've already learned,
+      more often when they're getting shaky. <a href="#" id="resetBtn">Reset progress</a>
+    </p>
+
+    <button class="btn ghost" id="installBtn">📲 Install Écoute on this device</button>
+
+    <!-- daily push reminder -->
+    <div class="rem-panel" id="remPanel">
+      <div class="rem-row">
+        <div>
+          <b>🔔 Daily reminder</b>
+          <div class="rem-sub" id="remSub">Let Rémy nudge you once a day, so the streak survives.</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="remToggle" />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="rem-row" id="remHourRow" style="display:none">
+        <label for="remHour" style="font-size:.9rem;color:var(--muted)">Remind me at</label>
+        <div style="display:flex;align-items:center;gap:14px">
+          <select id="remHour"></select>
+          <a href="#" id="remTest">Send a test</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">
+      <h2>Free practice</h2>
+    </div>
+    <details class="free">
+      <summary>Jump straight into any level, outside the course</summary>
     <div class="levels">
       <div class="lvl" onclick="startLevel(1)">
         <h3>🔤 Level 1 — Words</h3>
@@ -182,7 +345,12 @@
         <span class="tag" id="tag6">your own text · needs a Gemini key</span>
       </div>
     </div>
+    </details>
     <div id="voiceWarn" class="warn">⚠️ Speech support not detected. For best results use Chrome, Edge or Safari.</div>
+    <div class="updbar">
+      <span id="updVer">Écoute</span>
+      <button class="linkbtn" id="updCheck">⟳ Check for updates</button>
+    </div>
     <p class="small">Audio uses <b>Google Translate's natural French voice</b> by default (needs internet). Switch to any French voice on your computer with the <b>Voice</b> menu inside a level — your choice is remembered. Each round the spoken word is picked at random, so you have to <b>listen</b> — memorising answers won't help, and meanings stay hidden until you answer so you can't guess from sense. Tap the big button (or <b>🔊 Normal</b>) to replay the prompt, <b>🐢 Slow</b> to stretch it out, and the <b>🔊 / 🐢</b> on each card to hear that option fast or slow.</p>
   </section>
 
@@ -279,406 +447,37 @@
   <!-- RESULT -->
   <section id="result" class="card" style="display:none">
     <div class="result">
+      <div class="remy-card" id="resultRemy" style="display:none;text-align:left">
+        <img class="remy-av small" src="/remy.svg" alt="Rémy" width="52" height="52" />
+        <div class="remy-say">
+          <div class="bubble" id="resultRemyLine"></div>
+          <div class="stats" id="resultStats"></div>
+        </div>
+      </div>
       <div class="score" id="finalScore">0 / 30</div>
       <p id="resultMsg"></p>
       <div id="missedList" style="text-align:left;margin:16px auto;max-width:460px"></div>
       <div class="footer-row" style="justify-content:center;gap:12px">
         <button class="btn ghost" onclick="quitToMenu()">← Menu</button>
-        <button class="btn" id="retryBtn">Try again</button>
+        <button class="btn ghost" id="retryBtn">Try again</button>
+        <button class="btn" id="nextLessonBtn" style="display:none">Next lesson →</button>
       </div>
     </div>
   </section>
 </div>
 
+<script src="js/data.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/gemini.js"></script>
 <script>
-/* ===========================================================
-   DATA — every French vowel phoneme is covered across the set.
-   Oral:  i y u e ɛ ø œ ə a o ɔ
-   Nasal: ɑ̃ ɛ̃ ɔ̃ œ̃
-   Each item: prompt (what is spoken), options, answer index, focus, ipa
-   =========================================================== */
 
-const LEVEL1 = [
-  {p:"chat",  o:["chat","chien"],  a:0, focus:"/a/ vs /jɛ̃/", ipa:"chat /ʃa/ · chien /ʃjɛ̃/"},
-  {p:"son",   o:["son","sang"],    a:0, focus:"/ɔ̃/ vs /ɑ̃/",  ipa:"son /sɔ̃/ · sang /sɑ̃/"},
-  {p:"tout",  o:["tout","tu"],     a:0, focus:"/u/ vs /y/",   ipa:"tout /tu/ · tu /ty/"},
-  {p:"roue",  o:["roue","rue"],    a:0, focus:"/u/ vs /y/",   ipa:"roue /ʁu/ · rue /ʁy/"},
-  {p:"nous",  o:["nous","nu"],     a:0, focus:"/u/ vs /y/",   ipa:"nous /nu/ · nu /ny/"},
-  {p:"vous",  o:["vous","vu"],     a:0, focus:"/u/ vs /y/",   ipa:"vous /vu/ · vu /vy/"},
-  {p:"vie",   o:["vie","vue"],     a:0, focus:"/i/ vs /y/",   ipa:"vie /vi/ · vue /vy/"},
-  {p:"si",    o:["si","su"],       a:0, focus:"/i/ vs /y/",   ipa:"si /si/ · su /sy/"},
-  {p:"lit",   o:["lit","lu"],      a:0, focus:"/i/ vs /y/",   ipa:"lit /li/ · lu /ly/"},
-  {p:"beau",  o:["beau","bon"],    a:0, focus:"/o/ vs /ɔ̃/",   ipa:"beau /bo/ · bon /bɔ̃/"},
-  {p:"mot",   o:["mot","mon"],     a:0, focus:"/o/ vs /ɔ̃/",   ipa:"mot /mo/ · mon /mɔ̃/"},
-  {p:"dos",   o:["dos","don"],     a:0, focus:"/o/ vs /ɔ̃/",   ipa:"dos /do/ · don /dɔ̃/"},
-  {p:"seau",  o:["seau","son"],    a:0, focus:"/o/ vs /ɔ̃/",   ipa:"seau /so/ · son /sɔ̃/"},
-  {p:"faux",  o:["faux","fond"],   a:0, focus:"/o/ vs /ɔ̃/",   ipa:"faux /fo/ · fond /fɔ̃/"},
-  {p:"pain",  o:["pain","pont"],   a:0, focus:"/ɛ̃/ vs /ɔ̃/",   ipa:"pain /pɛ̃/ · pont /pɔ̃/"},
-  {p:"bain",  o:["bain","bon"],    a:0, focus:"/ɛ̃/ vs /ɔ̃/",   ipa:"bain /bɛ̃/ · bon /bɔ̃/"},
-  {p:"fin",   o:["fin","font"],    a:0, focus:"/ɛ̃/ vs /ɔ̃/",   ipa:"fin /fɛ̃/ · font /fɔ̃/"},
-  {p:"vin",   o:["vin","vent"],    a:0, focus:"/ɛ̃/ vs /ɑ̃/",   ipa:"vin /vɛ̃/ · vent /vɑ̃/"},
-  {p:"main",  o:["main","ment"],   a:0, focus:"/ɛ̃/ vs /ɑ̃/",   ipa:"main /mɛ̃/ · ment /mɑ̃/"},
-  {p:"rond",  o:["rond","rang"],   a:0, focus:"/ɔ̃/ vs /ɑ̃/",   ipa:"rond /ʁɔ̃/ · rang /ʁɑ̃/"},
-  {p:"bon",   o:["bon","banc"],    a:0, focus:"/ɔ̃/ vs /ɑ̃/",   ipa:"bon /bɔ̃/ · banc /bɑ̃/"},
-  {p:"long",  o:["long","lent"],   a:0, focus:"/ɔ̃/ vs /ɑ̃/",   ipa:"long /lɔ̃/ · lent /lɑ̃/"},
-  {p:"blond", o:["blond","blanc"], a:0, focus:"/ɔ̃/ vs /ɑ̃/",   ipa:"blond /blɔ̃/ · blanc /blɑ̃/"},
-  {p:"ton",   o:["ton","temps"],   a:0, focus:"/ɔ̃/ vs /ɑ̃/",   ipa:"ton /tɔ̃/ · temps /tɑ̃/"},
-  {p:"sa",    o:["sa","sans"],     a:0, focus:"/a/ vs /ɑ̃/",   ipa:"sa /sa/ · sans /sɑ̃/"},
-  {p:"ça",    o:["ça","cent"],     a:0, focus:"/a/ vs /ɑ̃/",   ipa:"ça /sa/ · cent /sɑ̃/"},
-  {p:"va",    o:["va","vent"],     a:0, focus:"/a/ vs /ɑ̃/",   ipa:"va /va/ · vent /vɑ̃/"},
-  {p:"peur",  o:["peur","peu"],    a:0, focus:"/œ/ vs /ø/",   ipa:"peur /pœʁ/ · peu /pø/"},
-  {p:"sœur",  o:["sœur","ceux"],   a:0, focus:"/œ/ vs /ø/",   ipa:"sœur /sœʁ/ · ceux /sø/"},
-  {p:"jeune", o:["jeune","jeu"],   a:0, focus:"/œ/ vs /ø/",   ipa:"jeune /ʒœn/ · jeu /ʒø/"},
-  // simple oral-vowel pairs (chat/chaud family)
-  {p:"chat",  o:["chat","chaud"],  a:0, focus:"/a/ vs /o/",   ipa:"chat /ʃa/ · chaud /ʃo/"},
-  {p:"bas",   o:["bas","beau"],    a:0, focus:"/a/ vs /o/",   ipa:"bas /ba/ · beau /bo/"},
-  {p:"ma",    o:["ma","mot"],      a:0, focus:"/a/ vs /o/",   ipa:"ma /ma/ · mot /mo/"},
-  {p:"ta",    o:["ta","tôt"],      a:0, focus:"/a/ vs /o/",   ipa:"ta /ta/ · tôt /to/"},
-  {p:"pas",   o:["pas","peau"],    a:0, focus:"/a/ vs /o/",   ipa:"pas /pa/ · peau /po/"},
-  {p:"gras",  o:["gras","gros"],   a:0, focus:"/a/ vs /o/",   ipa:"gras /ɡʁa/ · gros /ɡʁo/"},
-  {p:"tout",  o:["tout","tôt"],    a:0, focus:"/u/ vs /o/",   ipa:"tout /tu/ · tôt /to/"},
-  {p:"sous",  o:["sous","seau"],   a:0, focus:"/u/ vs /o/",   ipa:"sous /su/ · seau /so/"},
-  {p:"loup",  o:["loup","lu"],     a:0, focus:"/u/ vs /y/",   ipa:"loup /lu/ · lu /ly/"},
-  {p:"joue",  o:["joue","jus"],    a:0, focus:"/u/ vs /y/",   ipa:"joue /ʒu/ · jus /ʒy/"},
-  {p:"boue",  o:["boue","bu"],     a:0, focus:"/u/ vs /y/",   ipa:"boue /bu/ · bu /by/"},
-  {p:"cou",   o:["cou","queue"],   a:0, focus:"/u/ vs /ø/",   ipa:"cou /ku/ · queue /kø/"},
-  {p:"lit",   o:["lit","les"],     a:0, focus:"/i/ vs /e/",   ipa:"lit /li/ · les /le/"},
-  {p:"ni",    o:["ni","nez"],      a:0, focus:"/i/ vs /e/",   ipa:"ni /ni/ · nez /ne/"},
-  {p:"dit",   o:["dit","des"],     a:0, focus:"/i/ vs /e/",   ipa:"dit /di/ · des /de/"},
-  {p:"mes",   o:["mes","mais"],    a:0, focus:"/e/ vs /ɛ/",   ipa:"mes /me/ · mais /mɛ/"},
-  {p:"les",   o:["les","lait"],    a:0, focus:"/e/ vs /ɛ/",   ipa:"les /le/ · lait /lɛ/"},
-  {p:"peu",   o:["peu","peau"],    a:0, focus:"/ø/ vs /o/",   ipa:"peu /pø/ · peau /po/"},
-  {p:"deux",  o:["deux","dos"],    a:0, focus:"/ø/ vs /o/",   ipa:"deux /dø/ · dos /do/"},
-  {p:"feu",   o:["feu","faux"],    a:0, focus:"/ø/ vs /o/",   ipa:"feu /fø/ · faux /fo/"},
-];
-
-// Level 2 — longer (multi-syllable) words, same clear contrasts.
-const LEVEL2 = [
-  {p:"bateau",  o:["bateau","bâton"],     a:0, focus:"/o/ vs /ɔ̃/",  ipa:"bateau /bato/ · bâton /batɔ̃/"},
-  {p:"manteau", o:["manteau","menton"],   a:0, focus:"/o/ vs /ɔ̃/",  ipa:"manteau /mɑ̃to/ · menton /mɑ̃tɔ̃/"},
-  {p:"chapeau", o:["chapeau","chapon"],   a:0, focus:"/o/ vs /ɔ̃/",  ipa:"chapeau /ʃapo/ · chapon /ʃapɔ̃/"},
-  {p:"oiseau",  o:["oiseau","oison"],     a:0, focus:"/o/ vs /ɔ̃/",  ipa:"oiseau /wazo/ · oison /wazɔ̃/"},
-  {p:"drapeau", o:["drapeau","drapons"],  a:0, focus:"/o/ vs /ɔ̃/",  ipa:"drapeau /dʁapo/ · drapons /dʁapɔ̃/"},
-  {p:"couteau", o:["couteau","coûtons"],  a:0, focus:"/o/ vs /ɔ̃/",  ipa:"couteau /kuto/ · coûtons /kutɔ̃/"},
-  {p:"rideau",  o:["rideau","ridons"],    a:0, focus:"/o/ vs /ɔ̃/",  ipa:"rideau /ʁido/ · ridons /ʁidɔ̃/"},
-  {p:"cerveau", o:["cerveau","servons"],  a:0, focus:"/o/ vs /ɔ̃/",  ipa:"cerveau /sɛʁvo/ · servons /sɛʁvɔ̃/"},
-  {p:"noyau",   o:["noyau","noyons"],     a:0, focus:"/o/ vs /ɔ̃/",  ipa:"noyau /nwajo/ · noyons /nwajɔ̃/"},
-  {p:"berceau", o:["berceau","berçons"],  a:0, focus:"/o/ vs /ɔ̃/",  ipa:"berceau /bɛʁso/ · berçons /bɛʁsɔ̃/"},
-  {p:"marron",  o:["marron","marrant"],   a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"marron /maʁɔ̃/ · marrant /maʁɑ̃/"},
-  {p:"savon",   o:["savon","savant"],     a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"savon /savɔ̃/ · savant /savɑ̃/"},
-  {p:"menton",  o:["menton","mentant"],   a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"menton /mɑ̃tɔ̃/ · mentant /mɑ̃tɑ̃/"},
-  {p:"ballon",  o:["ballon","ballant"],   a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"ballon /balɔ̃/ · ballant /balɑ̃/"},
-  {p:"bouchon", o:["bouchon","bouchant"], a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"bouchon /buʃɔ̃/ · bouchant /buʃɑ̃/"},
-  {p:"glaçon",  o:["glaçon","glaçant"],   a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"glaçon /ɡlasɔ̃/ · glaçant /ɡlasɑ̃/"},
-  {p:"maçon",   o:["maçon","massant"],    a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"maçon /masɔ̃/ · massant /masɑ̃/"},
-  {p:"cochon",  o:["cochon","cachant"],   a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"cochon /kɔʃɔ̃/ · cachant /kaʃɑ̃/"},
-  {p:"torchon", o:["torchon","torchant"], a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"torchon /tɔʁʃɔ̃/ · torchant /tɔʁʃɑ̃/"},
-  {p:"blouson", o:["blouson","blousant"], a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"blouson /bluzɔ̃/ · blousant /bluzɑ̃/"},
-  {p:"flocon",  o:["flocon","floquant"],  a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"flocon /flɔkɔ̃/ · floquant /flɔkɑ̃/"},
-  {p:"melon",   o:["melon","mêlant"],     a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"melon /məlɔ̃/ · mêlant /mɛlɑ̃/"},
-  {p:"jeton",   o:["jeton","jetant"],     a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"jeton /ʒətɔ̃/ · jetant /ʒətɑ̃/"},
-  {p:"raisin",  o:["raisin","raison"],    a:0, focus:"/ɛ̃/ vs /ɔ̃/", ipa:"raisin /ʁɛzɛ̃/ · raison /ʁɛzɔ̃/"},
-  {p:"lapin",   o:["lapin","lapon"],      a:0, focus:"/ɛ̃/ vs /ɔ̃/", ipa:"lapin /lapɛ̃/ · lapon /lapɔ̃/"},
-  {p:"bassin",  o:["bassin","basson"],    a:0, focus:"/ɛ̃/ vs /ɔ̃/", ipa:"bassin /basɛ̃/ · basson /basɔ̃/"},
-  {p:"moulin",  o:["moulin","moulons"],   a:0, focus:"/ɛ̃/ vs /ɔ̃/", ipa:"moulin /mulɛ̃/ · moulons /mulɔ̃/"},
-  {p:"ami",     o:["ami","amant"],        a:0, focus:"/i/ vs /ɑ̃/",  ipa:"ami /ami/ · amant /amɑ̃/"},
-  {p:"dessus",  o:["dessus","dessous"],   a:0, focus:"/y/ vs /u/",  ipa:"dessus /dəsy/ · dessous /dəsu/"},
-  {p:"ici",     o:["ici","issu"],         a:0, focus:"/i/ vs /y/",  ipa:"ici /isi/ · issu /isy/"},
-  // voicing /s/ vs /z/ and other simple multi-syllable contrasts
-  {p:"coussin", o:["coussin","cousin"],   a:0, focus:"/s/ vs /z/",  ipa:"coussin /kusɛ̃/ · cousin /kuzɛ̃/"},
-  {p:"poisson", o:["poisson","poison"],   a:0, focus:"/s/ vs /z/",  ipa:"poisson /pwasɔ̃/ · poison /pwazɔ̃/"},
-  {p:"dessert", o:["dessert","désert"],   a:0, focus:"/s/ vs /z/",  ipa:"dessert /desɛʁ/ · désert /dezɛʁ/"},
-  {p:"cheveux", o:["cheveux","chevaux"],  a:0, focus:"/ø/ vs /o/",  ipa:"cheveux /ʃəvø/ · chevaux /ʃəvo/"},
-  {p:"château", o:["château","chatons"],  a:0, focus:"/o/ vs /ɔ̃/",  ipa:"château /ʃato/ · chatons /ʃatɔ̃/"},
-  {p:"été",     o:["été","était"],        a:0, focus:"/e/ vs /ɛ/",  ipa:"été /ete/ · était /etɛ/"},
-];
-
-// Level 3 — the same sounds inside full sentences.
-const LEVEL3 = [
-  {p:"J'ai promené mon chat.",        o:["J'ai promené mon chat.","J'ai promené mon chien."],         a:0, focus:"/a/ vs /jɛ̃/", ipa:"chat /ʃa/ · chien /ʃjɛ̃/"},
-  {p:"Il a marqué le but.",           o:["Il a marqué le but.","Il a marqué le bout."],               a:0, focus:"/y/ vs /u/",  ipa:"but /by/ · bout /bu/"},
-  {p:"La roue tourne lentement.",     o:["La roue tourne lentement.","La rue tourne lentement."],     a:0, focus:"/u/ vs /y/",  ipa:"roue /ʁu/ · rue /ʁy/"},
-  {p:"J'adore cette vue.",            o:["J'adore cette vue.","J'adore cette vie."],                  a:0, focus:"/y/ vs /i/",  ipa:"vue /vy/ · vie /vi/"},
-  {p:"Le chat dort dessus.",          o:["Le chat dort dessus.","Le chat dort dessous."],            a:0, focus:"/y/ vs /u/",  ipa:"dessus /dəsy/ · dessous /dəsu/"},
-  {p:"Il vend des pulls.",            o:["Il vend des pulls.","Il vend des poules."],                 a:0, focus:"/y/ vs /u/",  ipa:"pull /pyl/ · poule /pul/"},
-  {p:"Il a très peu.",                o:["Il a très peu.","Il a très peur."],                         a:0, focus:"/ø/ vs /œ/",  ipa:"peu /pø/ · peur /pœʁ/"},
-  {p:"Le bateau est grand.",          o:["Le bateau est grand.","Le bâton est grand."],               a:0, focus:"/o/ vs /ɔ̃/",  ipa:"bateau /bato/ · bâton /batɔ̃/"},
-  {p:"Il porte un manteau marron.",   o:["Il porte un manteau marron.","Il porte un manteau marrant."], a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"marron /maʁɔ̃/ · marrant /maʁɑ̃/"},
-  {p:"C'est un bon savon.",           o:["C'est un bon savon.","C'est un bon savant."],               a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"savon /savɔ̃/ · savant /savɑ̃/"},
-  {p:"Le train est là.",              o:["Le train est là.","Le train est lent."],                   a:0, focus:"/a/ vs /ɑ̃/",  ipa:"là /la/ · lent /lɑ̃/"},
-  {p:"Il passe à toi.",               o:["Il passe à toi.","Il pense à toi."],                        a:0, focus:"/a/ vs /ɑ̃/",  ipa:"passe /pas/ · pense /pɑ̃s/"},
-  {p:"Il fait du vin.",               o:["Il fait du vin.","Il fait du vent."],                       a:0, focus:"/ɛ̃/ vs /ɑ̃/", ipa:"vin /vɛ̃/ · vent /vɑ̃/"},
-  {p:"Il peint le mur.",              o:["Il peint le mur.","Il pend le mur."],                       a:0, focus:"/ɛ̃/ vs /ɑ̃/", ipa:"peint /pɛ̃/ · pend /pɑ̃/"},
-  {p:"C'est un beau gâteau.",         o:["C'est un beau gâteau.","C'est un bon gâteau."],             a:0, focus:"/o/ vs /ɔ̃/",  ipa:"beau /bo/ · bon /bɔ̃/"},
-  {p:"C'est mon seau.",               o:["C'est mon seau.","C'est mon son."],                         a:0, focus:"/o/ vs /ɔ̃/",  ipa:"seau /so/ · son /sɔ̃/"},
-  {p:"Il a les cheveux blancs.",      o:["Il a les cheveux blancs.","Il a les cheveux blonds."],      a:0, focus:"/ɑ̃/ vs /ɔ̃/", ipa:"blanc /blɑ̃/ · blond /blɔ̃/"},
-  {p:"Dessine un rond.",              o:["Dessine un rond.","Dessine un rang."],                      a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"rond /ʁɔ̃/ · rang /ʁɑ̃/"},
-  {p:"Le film est long.",             o:["Le film est long.","Le film est lent."],                   a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"long /lɔ̃/ · lent /lɑ̃/"},
-  {p:"Le chien ronge l'os.",          o:["Le chien ronge l'os.","Le chien range l'os."],              a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"ronge /ʁɔ̃ʒ/ · range /ʁɑ̃ʒ/"},
-  {p:"C'est une forte pente.",        o:["C'est une forte pente.","C'est une forte ponte."],          a:0, focus:"/ɑ̃/ vs /ɔ̃/", ipa:"pente /pɑ̃t/ · ponte /pɔ̃t/"},
-  {p:"Quel beau teint !",             o:["Quel beau teint !","Quel beau ton !"],                      a:0, focus:"/ɛ̃/ vs /ɔ̃/", ipa:"teint /tɛ̃/ · ton /tɔ̃/"},
-  {p:"Je vois le train.",             o:["Je vois le train.","Je vois le tronc."],                    a:0, focus:"/ɛ̃/ vs /ɔ̃/", ipa:"train /tʁɛ̃/ · tronc /tʁɔ̃/"},
-  {p:"C'est un grand pin.",           o:["C'est un grand pin.","C'est un grand pont."],               a:0, focus:"/ɛ̃/ vs /ɔ̃/", ipa:"pin /pɛ̃/ · pont /pɔ̃/"},
-  {p:"J'aime le raisin.",             o:["J'aime le raisin.","J'aime la raison."],                    a:0, focus:"/ɛ̃/ vs /ɔ̃/", ipa:"raisin /ʁɛzɛ̃/ · raison /ʁɛzɔ̃/"},
-  {p:"Le pont est solide.",           o:["Le pont est solide.","Le pan est solide."],                 a:0, focus:"/ɔ̃/ vs /ɑ̃/", ipa:"pont /pɔ̃/ · pan /pɑ̃/"},
-  {p:"Quel beau banc !",              o:["Quel beau banc !","Quel beau bond !"],                      a:0, focus:"/ɑ̃/ vs /ɔ̃/", ipa:"banc /bɑ̃/ · bond /bɔ̃/"},
-  {p:"C'est une jolie rue.",          o:["C'est une jolie rue.","C'est une jolie roue."],             a:0, focus:"/y/ vs /u/",  ipa:"rue /ʁy/ · roue /ʁu/"},
-  {p:"Quel bon vin !",                o:["Quel bon vin !","Quel bon vent !"],                         a:0, focus:"/ɛ̃/ vs /ɑ̃/", ipa:"vin /vɛ̃/ · vent /vɑ̃/"},
-  {p:"Quel joli chapeau !",           o:["Quel joli chapeau !","Quel joli chapon !"],                 a:0, focus:"/o/ vs /ɔ̃/",  ipa:"chapeau /ʃapo/ · chapon /ʃapɔ̃/"},
-  {p:"J'ai mangé du poisson.",        o:["J'ai mangé du poisson.","J'ai mangé du poison."],           a:0, focus:"/s/ vs /z/",  ipa:"poisson /pwasɔ̃/ · poison /pwazɔ̃/"},
-  {p:"C'est mon cousin.",             o:["C'est mon cousin.","C'est mon coussin."],                   a:0, focus:"/z/ vs /s/",  ipa:"cousin /kuzɛ̃/ · coussin /kusɛ̃/"},
-  {p:"Elle a de beaux cheveux.",      o:["Elle a de beaux cheveux.","Elle a de beaux chevaux."],      a:0, focus:"/ø/ vs /o/",  ipa:"cheveux /ʃəvø/ · chevaux /ʃəvo/"},
-  {p:"Le dessert est bon.",           o:["Le dessert est bon.","Le désert est bon."],                 a:0, focus:"/s/ vs /z/",  ipa:"dessert /desɛʁ/ · désert /dezɛʁ/"},
-  {p:"C'est trop gras.",              o:["C'est trop gras.","C'est trop gros."],                      a:0, focus:"/a/ vs /o/",  ipa:"gras /ɡʁa/ · gros /ɡʁo/"},
-];
-
-/* ===== Italian translations (shown under each French word / sentence) ===== */
-const TRANS = {
-  // Level 1 — words
-  "chat":"gatto","chien":"cane","son":"suono","sang":"sangue","tout":"tutto","tu":"tu",
-  "roue":"ruota","rue":"strada","nous":"noi","nu":"nudo","vous":"voi","vu":"visto",
-  "vie":"vita","vue":"vista","si":"se","su":"saputo","lit":"letto","lu":"letto (p.p.)",
-  "beau":"bello","bon":"buono","mot":"parola","mon":"mio","dos":"schiena","don":"dono",
-  "seau":"secchio","faux":"falso","fond":"fondo","pain":"pane","pont":"ponte","bain":"bagno",
-  "fin":"fine","font":"fanno","vin":"vino","vent":"vento","main":"mano","ment":"mente",
-  "rond":"tondo","rang":"fila","banc":"panca","long":"lungo","lent":"lento","blond":"biondo",
-  "blanc":"bianco","ton":"tono","temps":"tempo","sa":"sua","sans":"senza","ça":"questo",
-  "cent":"cento","va":"va","peur":"paura","peu":"poco","sœur":"sorella","ceux":"quelli",
-  "jeune":"giovane","jeu":"gioco",
-  // Level 1 — new simple pairs
-  "chaud":"caldo","bas":"basso","ma":"mia","ta":"tua","tôt":"presto","pas":"passo",
-  "peau":"pelle","gras":"grasso","gros":"grosso","sous":"sotto","loup":"lupo","joue":"guancia",
-  "jus":"succo","boue":"fango","bu":"bevuto","cou":"collo","queue":"coda","les":"i / gli",
-  "ni":"né","nez":"naso","dit":"detto","des":"dei / degli","mes":"miei","mais":"ma",
-  "lait":"latte","deux":"due","feu":"fuoco",
-  // Level 2 — longer words
-  "bateau":"barca","bâton":"bastone","manteau":"cappotto","menton":"mento","chapeau":"cappello",
-  "chapon":"cappone","oiseau":"uccello","oison":"papero","drapeau":"bandiera","drapons":"(noi) drappeggiamo",
-  "couteau":"coltello","coûtons":"(noi) costiamo","rideau":"tenda","ridons":"(noi) ridiamo",
-  "cerveau":"cervello","servons":"(noi) serviamo","noyau":"nocciolo","noyons":"(noi) anneghiamo",
-  "berceau":"culla","berçons":"(noi) culliamo","marron":"marrone","marrant":"divertente",
-  "savon":"sapone","savant":"sapiente","mentant":"(che) mente","ballon":"pallone","ballant":"penzolante",
-  "bouchon":"tappo","bouchant":"(che) tappa","glaçon":"cubetto di ghiaccio","glaçant":"agghiacciante",
-  "maçon":"muratore","massant":"(che) massaggia","cochon":"maiale","cachant":"(che) nasconde",
-  "torchon":"straccio","torchant":"(che) pulisce","blouson":"giubbotto","blousant":"(che) si gonfia",
-  "flocon":"fiocco","floquant":"(che) riveste","melon":"melone","mêlant":"(che) mescola",
-  "jeton":"gettone","jetant":"(che) getta","raisin":"uva","raison":"ragione","lapin":"coniglio",
-  "lapon":"lappone","bassin":"bacino","basson":"fagotto","moulin":"mulino","moulons":"(noi) maciniamo",
-  "ami":"amico","amant":"amante","dessus":"sopra","dessous":"sotto","ici":"qui","issu":"derivato",
-  "coussin":"cuscino","cousin":"cugino","poisson":"pesce","poison":"veleno","dessert":"dolce",
-  "désert":"deserto","cheveux":"capelli","chevaux":"cavalli","château":"castello","chatons":"gattini",
-  "été":"estate","était":"era",
-  // Level 3 — sentences
-  "J'ai promené mon chat.":"Ho portato a spasso il mio gatto.",
-  "J'ai promené mon chien.":"Ho portato a spasso il mio cane.",
-  "Il a marqué le but.":"Ha segnato il gol.",
-  "Il a marqué le bout.":"Ha marcato l'estremità.",
-  "La roue tourne lentement.":"La ruota gira lentamente.",
-  "La rue tourne lentement.":"La strada gira lentamente.",
-  "J'adore cette vue.":"Adoro questa vista.",
-  "J'adore cette vie.":"Adoro questa vita.",
-  "Le chat dort dessus.":"Il gatto dorme sopra.",
-  "Le chat dort dessous.":"Il gatto dorme sotto.",
-  "Il vend des pulls.":"Vende dei maglioni.",
-  "Il vend des poules.":"Vende delle galline.",
-  "Il a très peu.":"Ne ha molto poco.",
-  "Il a très peur.":"Ha molta paura.",
-  "Le bateau est grand.":"La barca è grande.",
-  "Le bâton est grand.":"Il bastone è grande.",
-  "Il porte un manteau marron.":"Indossa un cappotto marrone.",
-  "Il porte un manteau marrant.":"Indossa un cappotto divertente.",
-  "C'est un bon savon.":"È un buon sapone.",
-  "C'est un bon savant.":"È un buon sapiente.",
-  "Le train est là.":"Il treno è qui.",
-  "Le train est lent.":"Il treno è lento.",
-  "Il passe à toi.":"Tocca a te.",
-  "Il pense à toi.":"Pensa a te.",
-  "Il fait du vin.":"Fa il vino.",
-  "Il fait du vent.":"Tira vento.",
-  "Il peint le mur.":"Dipinge il muro.",
-  "Il pend le mur.":"Appende il muro.",
-  "C'est un beau gâteau.":"È una bella torta.",
-  "C'est un bon gâteau.":"È una buona torta.",
-  "C'est mon seau.":"È il mio secchio.",
-  "C'est mon son.":"È il mio suono.",
-  "Il a les cheveux blancs.":"Ha i capelli bianchi.",
-  "Il a les cheveux blonds.":"Ha i capelli biondi.",
-  "Dessine un rond.":"Disegna un cerchio.",
-  "Dessine un rang.":"Disegna una fila.",
-  "Le film est long.":"Il film è lungo.",
-  "Le film est lent.":"Il film è lento.",
-  "Le chien ronge l'os.":"Il cane rosicchia l'osso.",
-  "Le chien range l'os.":"Il cane mette a posto l'osso.",
-  "C'est une forte pente.":"È una forte pendenza.",
-  "C'est une forte ponte.":"È una grande covata.",
-  "Quel beau teint !":"Che bel colorito!",
-  "Quel beau ton !":"Che bel tono!",
-  "Je vois le train.":"Vedo il treno.",
-  "Je vois le tronc.":"Vedo il tronco.",
-  "C'est un grand pin.":"È un grande pino.",
-  "C'est un grand pont.":"È un grande ponte.",
-  "J'aime le raisin.":"Mi piace l'uva.",
-  "J'aime la raison.":"Amo la ragione.",
-  "Le pont est solide.":"Il ponte è solido.",
-  "Le pan est solide.":"Il lembo è solido.",
-  "Quel beau banc !":"Che bella panchina!",
-  "Quel beau bond !":"Che bel balzo!",
-  "C'est une jolie rue.":"È una bella strada.",
-  "C'est une jolie roue.":"È una bella ruota.",
-  "Quel bon vin !":"Che buon vino!",
-  "Quel bon vent !":"Che buon vento!",
-  "Quel joli chapeau !":"Che bel cappello!",
-  "Quel joli chapon !":"Che bel cappone!",
-  "J'ai mangé du poisson.":"Ho mangiato del pesce.",
-  "J'ai mangé du poison.":"Ho mangiato del veleno.",
-  "C'est mon cousin.":"È mio cugino.",
-  "C'est mon coussin.":"È il mio cuscino.",
-  "Elle a de beaux cheveux.":"Ha bei capelli.",
-  "Elle a de beaux chevaux.":"Ha bei cavalli.",
-  "Le dessert est bon.":"Il dolce è buono.",
-  "Le désert est bon.":"Il deserto è buono.",
-  "C'est trop gras.":"È troppo grasso.",
-  "C'est trop gros.":"È troppo grosso.",
-};
-
-/* ===== "Odd" prompts =====
-   Grammatically correct but not something you'd normally say — they exist only
-   to give a clean minimal pair for the sound. After the user answers we flag
-   these so they know the phrase isn't meant to make real-world sense. */
-const ODD = new Set([
-  // Level 2 — real "nous" verb forms, but you'd never say them on their own
-  "drapons","coûtons","ridons","servons","noyons","berçons","moulons",
-  // Level 3 — the semantically odd half of each sentence pair
-  "Il a marqué le bout.","La rue tourne lentement.","Il porte un manteau marrant.",
-  "Il pend le mur.","C'est mon son.","Le chien range l'os.","C'est une forte ponte.",
-  "Le pan est solide.","Quel joli chapon !","J'ai mangé du poison.","Le désert est bon.",
-]);
-
-/* =========================== AUDIO ENGINE ===========================
-   Two sources:
-   1) "google"  — Google Translate's TTS (natural voice). Plays as a
-      cross-origin <audio> stream (media playback isn't CORS-blocked).
-      If it can't load (offline / endpoint change), we auto-fall back.
-   2) System voices — the browser's SpeechSynthesis voices. We rank them
-      so a high-quality voice ("Google français", Enhanced/Premium,
-      Thomas, Amélie…) is preferred over the low-quality compact ones.
-   The user can switch sources/voices in the dropdown; choice is saved.
-   ==================================================================== */
-const sel = document.getElementById('voiceSel');
-const playBtn = document.getElementById('play');
-let sysVoices = [];
-let googleFailed = false;
-let curAudio = null;
-
-function rank(v){
-  const n = (v.name||'').toLowerCase();
-  let s = 0;
-  if(n.includes('google')) s += 50;            // Chrome's network neural voice
-  if(/enhanced|premium|neural|siri/.test(n)) s += 40;
-  if(/thomas|amélie|amelie|audrey|aurélie|aurelie|virginie|marie/.test(n)) s += 20;
-  if(/compact|eloquence|pico/.test(n)) s -= 30; // low-quality engines
-  if(/fr[-_]fr/i.test(v.lang)) s += 5;
-  return s;
-}
-
-function buildVoiceList(){
-  const all = ('speechSynthesis' in window) ? speechSynthesis.getVoices() : [];
-  sysVoices = all.filter(v=>/^fr/i.test(v.lang)).sort((a,b)=>rank(b)-rank(a));
-  const saved = localStorage.getItem('ecoute_voice');
-  sel.innerHTML = '';
-  const og = document.createElement('option');
-  og.value = 'google'; og.textContent = 'Google Translate (natural) — recommended';
-  sel.appendChild(og);
-  sysVoices.forEach((v,i)=>{
-    const o = document.createElement('option');
-    o.value = 'sys:'+i;
-    o.textContent = 'System · ' + v.name;
-    sel.appendChild(o);
-  });
-  // restore saved choice if still valid, else default to Google
-  if(saved && [...sel.options].some(o=>o.value===saved)) sel.value = saved;
-  else sel.value = 'google';
-}
-if('speechSynthesis' in window){
-  buildVoiceList();
-  speechSynthesis.onvoiceschanged = buildVoiceList;
-}
-sel.addEventListener('change', ()=>{
-  localStorage.setItem('ecoute_voice', sel.value);
-  setToast('');
-});
-
-function setToast(msg){
-  const h = document.querySelector('.listen .hint');
-  if(!h) return;
-  if(msg){ h.className='hint toast'; h.textContent = msg; }
-  else { h.className='hint'; h.textContent = 'Listen, then choose what you heard.'; }
-}
-
-function bestSysVoice(){ return sysVoices[0] || null; }
-
-function speakSystem(text, slow, voice){
-  if(!('speechSynthesis' in window)) { setToast('No speech support in this browser.'); return; }
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  const v = voice || bestSysVoice();
-  u.lang = 'fr-FR';
-  if(v) u.voice = v;
-  u.rate = slow ? 0.5 : 0.95;
-  u.onstart = ()=> playBtn.classList.add('playing');
-  u.onend   = ()=> playBtn.classList.remove('playing');
-  speechSynthesis.speak(u);
-}
-
-function googleURL(text, slow){
-  const base = 'https://translate.google.com/translate_tts';
-  const q = encodeURIComponent(text);
-  let u = `${base}?ie=UTF-8&q=${q}&tl=fr&client=tw-ob&total=1&idx=0&textlen=${text.length}`;
-  if(slow) u += '&ttsspeed=0.3';
-  return u;
-}
-
-function playGoogle(text, slow){
-  return new Promise((resolve,reject)=>{
-    if(curAudio){ curAudio.pause(); curAudio = null; }
-    const a = new Audio();
-    a.crossOrigin = null;
-    a.src = googleURL(text, slow);
-    curAudio = a;
-    let settled = false;
-    const timer = setTimeout(()=>{ if(!settled){ settled=true; reject(new Error('timeout')); } }, 6000);
-    a.onplaying = ()=> playBtn.classList.add('playing');
-    a.onended   = ()=>{ playBtn.classList.remove('playing'); clearTimeout(timer); if(!settled){settled=true;resolve();} };
-    a.onerror   = ()=>{ playBtn.classList.remove('playing'); clearTimeout(timer); if(!settled){settled=true;reject(new Error('audio error'));} };
-    a.play().catch(err=>{ clearTimeout(timer); if(!settled){settled=true;reject(err);} });
-  });
-}
-
-// Unified entry point used everywhere in the quiz.
-function speak(text, slow){
-  if(!text) return;
-  const choice = sel.value;
-  if(choice.startsWith('sys:')){
-    speakSystem(text, !!slow, sysVoices[+choice.split(':')[1]]);
-    return;
-  }
-  // Google source
-  if(googleFailed){ speakSystem(text, !!slow); return; }
-  playGoogle(text, !!slow).catch(()=>{
-    // First failure: remember it, switch UI to best system voice, inform user.
-    googleFailed = true;
-    if(sysVoices.length){
-      sel.value = 'sys:0';
-      localStorage.setItem('ecoute_voice', 'sys:0');
-      setToast('Google audio unavailable — switched to “'+sysVoices[0].name+'”.');
-    } else {
-      setToast('Google audio unavailable and no system French voice found.');
-    }
-    speakSystem(text, !!slow);
-  });
-}
-
-let deck=[], idx=0, score=0, level=1, answered=false, missed=[];
+// mode: 'free'   — the old menu levels, unchanged
+//       'lesson' — one step of Rémy's course (see the COURSE block below)
+// lessonStep: 1 = 👂 words, 2 = 👂 in context, 3 = 🎤 speak
+// courseCtx : set while a mic-based COURSE step is running, so the shared speak
+//             flow knows it's a lesson and not free-practice Level 4/5/6
+let deck=[], idx=0, score=0, level=1, answered=false, missed=[], mode='free', lessonIdx=0, lessonStep=1;
+let courseCtx = null;
 
 function shuffle(arr){
   const a = arr.slice();
@@ -701,6 +500,7 @@ const QUIZ_LEN = 20;   // questions drawn at random from the (larger) pool each 
 
 function startLevel(lv){
   level = lv;
+  mode = 'free';
   if(lv===4 || lv===5 || lv===6){ startSpeak(); return; }   // Levels 4-6 use the mic-based flow
   const src = LEVELS[lv] || LEVEL1;
   // shuffle question order, take a random subset; the spoken word of each pair
@@ -720,7 +520,7 @@ function render(){
   const spokenIdx = Math.floor(Math.random()*q.o.length);
   q.p = q.o[spokenIdx];
   q.order = shuffle(q.o.map((t,i)=>({t, correct:i===spokenIdx})));
-  document.getElementById('counter').textContent = `Question ${idx+1} / ${deck.length} · Score ${score}`;
+  document.getElementById('counter').innerHTML = counterText();
   document.getElementById('bar').style.width = `${(idx)/deck.length*100}%`;
   document.getElementById('feedback').innerHTML = '';
   document.getElementById('next').disabled = true;
@@ -745,9 +545,18 @@ function render(){
   setTimeout(()=> speak(q.p), 250);
 }
 
+// "Question 3 / 12 · 🔁 review · Score 2" — the review flag is safe to show,
+// it says which sound is being tested, never which option is right.
+function counterText(){
+  const q = deck[idx];
+  const chip = (q && q.review) ? ` <span class="chip">🔁 review</span>` : '';
+  return `Question ${idx+1} / ${deck.length}${chip} · Score ${score}`;
+}
+
 function choose(btn, opt, q){
   if(answered) return;
   answered=true;
+  if(mode==='lesson') recordAnswer(q.key, opt.correct, q.review);
   const buttons = [...document.querySelectorAll('.opt')];
   buttons.forEach(b=>{
     b.classList.add('locked');  // visual lock; speakers stay clickable
@@ -780,7 +589,7 @@ function choose(btn, opt, q){
     document.getElementById('feedback').innerHTML +=
       `<div class="oddnote">🤔 « ${q.p} » is grammatically correct but isn't something you'd normally say — it's here only to train your ear for the sound.</div>`;
   }
-  document.getElementById('counter').textContent = `Question ${idx+1} / ${deck.length} · Score ${score}`;
+  document.getElementById('counter').innerHTML = counterText();
   document.getElementById('next').disabled = false;
   document.getElementById('next').textContent = (idx+1<deck.length)?'Next →':'See results';
 }
@@ -792,11 +601,18 @@ document.getElementById('next').onclick = ()=>{
 document.getElementById('play').onclick = ()=> speak(deck[idx].p, false);
 document.getElementById('replay').onclick = ()=> speak(deck[idx].p, false);
 document.getElementById('slow').onclick = ()=> speak(deck[idx].p, true);
-document.getElementById('retryBtn').onclick = ()=> startLevel(level);
+document.getElementById('retryBtn').onclick = ()=> (mode==='lesson') ? startLesson(lessonIdx) : startLevel(level);
 
 function finish(){
   show('result');
   document.getElementById('bar').style.width='100%';
+  if(mode==='lesson'){ finishLesson(); return; }
+
+  document.getElementById('resultRemy').style.display='none';
+  document.getElementById('nextLessonBtn').style.display='none';
+  document.getElementById('retryBtn').className='btn';
+  document.getElementById('retryBtn').textContent='Try again';
+  document.getElementById('retryBtn').onclick = ()=> startLevel(level);
   document.getElementById('finalScore').textContent = `${score} / ${deck.length}`;
   const pct = score/deck.length;
   let msg = pct===1 ? "Parfait ! A flawless ear. 👂🇫🇷"
@@ -816,7 +632,11 @@ function finish(){
   }
 }
 
-function quitToMenu(){ speechSynthesis.cancel(); abortRecording(); show('menu'); }
+function quitToMenu(){
+  speechSynthesis.cancel(); abortRecording();
+  mode='free'; courseCtx=null;
+  renderCourse(); show('menu');
+}
 function show(id){
   ['menu','quiz','pronounce','result'].forEach(s=> document.getElementById(s).style.display = (s===id?'':'none'));
   window.scrollTo(0,0);
@@ -828,11 +648,6 @@ function show(id){
    - Audio: captured via Web Audio and encoded to 16-bit mono WAV @16kHz
             (a format Gemini accepts on every browser, unlike webm/opus).
    ========================================================================= */
-const GEMINI_MODEL = 'gemini-3.5-flash';      // newer audio model — better ear for fine vowel/nasal calls
-const SPEAK_LEN = 10;                          // words per round
-
-function geminiKey(){ return localStorage.getItem('ecoute_gemini_key') || ''; }
-function setGeminiKey(k){ localStorage.setItem('ecoute_gemini_key', k.trim()); }
 
 // build word -> IPA map from the Level-1 ipa strings ("chat /ʃa/ · chien /ʃjɛ̃/")
 function buildIpaMap(levels){
@@ -845,7 +660,9 @@ function buildIpaMap(levels){
   }));
   return m;
 }
-const IPA_MAP = buildIpaMap([LEVEL1]);
+// Built from all three levels: the course's 🎤 step needs IPA for words that only
+// appear in Level 2 (the /s/ vs /z/ contrast has no single-syllable pair at all).
+const IPA_MAP = buildIpaMap([LEVEL1, LEVEL2, LEVEL3]);
 // each word keeps the minimal-pair neighbour(s) it's easily confused with, so
 // Gemini can be told exactly which vowel drift to listen for.
 const L1_WORDS = (()=>{
@@ -860,34 +677,13 @@ const L1_WORDS = (()=>{
   return [...map.values()];
 })();
 
-/* ---- Level 5 — read aloud full sentences about French / European law ---- */
-const LAW_SENTENCES = [
-  {s:"Le Parlement européen adopte de nouvelles directives.",            it:"Il Parlamento europeo adotta nuove direttive."},
-  {s:"La Cour de cassation a rendu son arrêt hier.",                     it:"La Corte di cassazione ha emesso la sentenza ieri."},
-  {s:"Le Conseil constitutionnel vérifie la conformité des lois.",       it:"Il Consiglio costituzionale verifica la conformità delle leggi."},
-  {s:"Chaque citoyen européen bénéficie de la libre circulation.",       it:"Ogni cittadino europeo beneficia della libera circolazione."},
-  {s:"Le droit communautaire prime sur le droit national.",              it:"Il diritto comunitario prevale sul diritto nazionale."},
-  {s:"La Commission européenne propose un nouveau règlement.",           it:"La Commissione europea propone un nuovo regolamento."},
-  {s:"Les traités garantissent les droits fondamentaux des personnes.",  it:"I trattati garantiscono i diritti fondamentali delle persone."},
-  {s:"Le tribunal administratif examine les recours des citoyens.",      it:"Il tribunale amministrativo esamina i ricorsi dei cittadini."},
-  {s:"La Convention européenne protège les libertés individuelles.",     it:"La Convenzione europea protegge le libertà individuali."},
-  {s:"Le législateur a voté le projet de loi à l'unanimité.",            it:"Il legislatore ha votato il disegno di legge all'unanimità."},
-  {s:"La jurisprudence interprète les textes juridiques ambigus.",       it:"La giurisprudenza interpreta i testi giuridici ambigui."},
-  {s:"Le Conseil d'État conseille le gouvernement sur les décrets.",     it:"Il Consiglio di Stato consiglia il governo sui decreti."},
-  {s:"La Cour de justice de l'Union européenne siège à Luxembourg.",     it:"La Corte di giustizia dell'Unione europea ha sede a Lussemburgo."},
-  {s:"Le règlement protège les données personnelles des utilisateurs.",  it:"Il regolamento protegge i dati personali degli utenti."},
-  {s:"L'avocat plaide la cause de son client devant le juge.",           it:"L'avvocato difende la causa del suo cliente davanti al giudice."},
-  {s:"Le contrat engage les deux parties signataires.",                  it:"Il contratto vincola le due parti firmatarie."},
-  {s:"La séparation des pouvoirs garantit l'indépendance de la justice.", it:"La separazione dei poteri garantisce l'indipendenza della giustizia."},
-  {s:"Les États membres ratifient le traité européen.",                  it:"Gli Stati membri ratificano il trattato europeo."},
-];
-const LAW_LEN = 8;
 
 let speakMode='words';   // 'words' (L4) | 'sentences' (L5) | 'custom' (L6, user's own sentence)
 let speakDeck=[], sidx=0, spassed=0, sresults=[], passedSet=new Set();
 function itemText(it){ return speakMode==='words' ? it.w : it.s; }
 
 function startSpeak(){
+  courseCtx = null;                     // free practice, not a course step
   speakMode = level===5 ? 'sentences' : level===6 ? 'custom' : 'words';
   document.getElementById('plabel').textContent =
     level===5 ? 'Level 5 · Law aloud' : level===6 ? 'Level 6 · Your sentence' : 'Level 4 · Speak';
@@ -896,9 +692,11 @@ function startSpeak(){
   proceedAfterKey();
 }
 
-// after a key is confirmed, go to the sentence box (L6) or straight to the deck (L4/L5)
+// after a key is confirmed, go to the course step, the sentence box (L6),
+// or straight to the free-practice deck (L4/L5)
 function proceedAfterKey(){
-  if(speakMode==='custom') showSentencePanel();
+  if(courseCtx) beginCourseSpeakDeck();
+  else if(speakMode==='custom') showSentencePanel();
   else beginSpeakDeck();
 }
 
@@ -919,13 +717,6 @@ document.getElementById('keySave').onclick = ()=>{
 };
 document.getElementById('changeKey').onclick = (e)=>{ e.preventDefault(); abortRecording(); showKeyPanel(); };
 
-/* ---- Level 6: enter / train a custom sentence ---- */
-const SENT_EXAMPLES = [
-  "La liberté des uns s'arrête là où commence celle des autres.",
-  "Je voudrais réserver une table pour deux personnes à vingt heures.",
-  "Les grenouilles vertes coassent au bord de l'étang.",
-  "Mon oncle habite un vieux village au cœur des montagnes."
-];
 function showSentencePanel(){
   document.getElementById('speakPanel').style.display='none';
   document.getElementById('keyPanel').style.display='none';
@@ -1128,150 +919,6 @@ function micErrorHint(err){
   return (err && err.message) || 'Could not start the microphone.';
 }
 
-function buildGradeBody(item, b64){
-  const word = item.w, ipa = item.ipa;
-  const conf = item.confusions || [];
-  const confLine = conf.length
-    ? `A common mistake is to replace its vowel with that of ${conf.map(c=>`"${c.w}"${c.ipa?` /${c.ipa}/`:''}`).join(' or ')}; mark it incorrect and set leansToward to that word ONLY if you clearly hear that specific substitution.`
-    : ``;
-  return {
-    contents:[{ parts:[
-      { text:
-        `You are a precise but fair French pronunciation coach grading an advanced learner. Decide whether the recording is a correct pronunciation of the single French word "${word}"${ipa?` whose correct pronunciation is /${ipa}/`:``}. `
-        + `Compare the vowel (and any nasal) the learner produced against the target${ipa?` /${ipa}/`:''}. Give the benefit of the doubt: if the vowel is consistent with the target it is CORRECT, even with a mild non-native accent — and even for short words that are naturally ambiguous in isolation. French nasal vowels /ɑ̃/, /ɔ̃/, /ɛ̃/ resemble each other out of context, so do NOT fail a correct target vowel merely because it could resemble a neighbour. `
-        + confLine + ` `
-        + `Only mark it incorrect when the vowel is CLEARLY a different sound from the target. Ignore background noise, microphone quality and volume. If the clip is empty or silent, score 0 and mark it incorrect. `
-        + `Scoring guide — 90-100: matches the target vowel, native-like; 70-89: target vowel right, mild accent (correct=true); 40-69: vowel noticeably wrong or drifts to a different sound (correct=false); below 40: a clearly different word. Respond as JSON.` },
-      { inline_data:{ mime_type:'audio/wav', data: b64 } }
-    ]}],
-    generationConfig:{
-      // Gemini 3.x can't fully disable thinking; "minimal" = lowest latency.
-      // Temperature left at the model default (recommended for Gemini 3).
-      thinkingConfig:{ thinkingLevel:'minimal' },
-      responseMimeType:'application/json',
-      responseSchema:{
-        type:'OBJECT',
-        properties:{
-          score:{type:'INTEGER', description:'0-100 per the scoring guide; correct=true needs >=70'},
-          correct:{type:'BOOLEAN', description:'true if the vowel matches the target sound (mild accent fine; isolation ambiguity is not a fault); false only when the vowel is clearly a different sound'},
-          heard:{type:'STRING', description:'the closest real French word(s) it actually sounded like, or its IPA'},
-          leansToward:{type:'STRING', description:'only if you clearly hear the target vowel replaced by a neighbour’s vowel, name that word; otherwise empty string'},
-          feedback:{type:'STRING', description:'one concrete articulatory tip (tongue height/position, lip rounding, nasality) in English, max 30 words'}
-        },
-        required:['score','correct','heard','leansToward','feedback']
-      }
-    }
-  };
-}
-
-async function gradeOnce(body, key){
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(key)}`;
-  let res;
-  try{ res = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); }
-  catch(e){ throw new Error('Network error reaching Gemini.'); }
-  if(!res.ok){
-    let detail=''; try{ const j=await res.json(); detail = j?.error?.message || ''; }catch(e){}
-    if(res.status===400 && /API key/i.test(detail)) throw new Error('Invalid API key. Use ⚙︎ Change Gemini key.');
-    if(res.status===403) throw new Error('Key rejected (403). Enable the Generative Language API for it.');
-    if(res.status===429) throw new Error('Rate limit reached (429). Wait a moment and retry.');
-    throw new Error(`Gemini error ${res.status}${detail?': '+detail.slice(0,140):''}`);
-  }
-  const j = await res.json();
-  const text = j?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if(!text) throw new Error('Empty response from Gemini.');
-  let out; try{ out = JSON.parse(text); }catch(e){ throw new Error('Could not read Gemini response.'); }
-  out.score = Math.max(0, Math.min(100, parseInt(out.score,10)||0));
-  out.correct = !!out.correct;
-  out.leansToward = (out.leansToward||'').trim();
-  return out;
-}
-
-// Two independent graders are sent at once. Passing requires BOTH to agree the
-// pronunciation is correct, which trims false positives without adding false
-// negatives; scores are averaged and the stricter judge's feedback is shown.
-function mergeVerdicts(a, b){
-  const strict = (a.score <= b.score) ? a : b;     // harsher judge drives the notes
-  return {
-    score: Math.round((a.score + b.score)/2),
-    correct: a.correct && b.correct,
-    heard: strict.heard || a.heard || b.heard || '',
-    leansToward: (a.leansToward || b.leansToward || '').trim(),
-    feedback: strict.feedback || a.feedback || b.feedback || ''
-  };
-}
-
-async function analyzePronunciation(item, wavBuf){
-  const key = geminiKey();
-  if(!key) throw new Error('No Gemini key set.');
-  const body = buildGradeBody(item, abToBase64(wavBuf));
-  const settled = await Promise.allSettled([ gradeOnce(body, key), gradeOnce(body, key) ]);
-  const oks = settled.filter(s=>s.status==='fulfilled').map(s=>s.value);
-  if(!oks.length) throw (settled[0].reason || new Error('Grading failed.'));
-  return oks.length===2 ? mergeVerdicts(oks[0], oks[1]) : oks[0];   // one survivor still usable
-}
-
-/* ---- Level 5: grade a whole spoken sentence, naming the words that are off ---- */
-function buildSentenceBody(sentence, b64){
-  return {
-    contents:[{ parts:[
-      { text:
-        `You are a precise but fair French pronunciation coach. The learner read this French sentence aloud (a sentence about French / European law):\n"${sentence}"\n`
-        + `Listen to the recording and judge their pronunciation word by word. List the specific words from the sentence that are mispronounced — wrong vowel or consonant, missing/incorrect liaison, wrong word, or clearly misplaced stress. `
-        + `Give the benefit of the doubt for a mild non-native accent: only flag a word if its error would actually stand out to a native listener. For each flagged word give a short, concrete tip. Use the exact spelling of the word as it appears in the sentence. `
-        + `Ignore background noise, microphone quality and volume. If the recording is empty or does not match the sentence, score 0 and mark it not passed. `
-        + `Scoring guide — 90-100: fluent, native-like; 75-89: clear with a mild accent; 50-74: understandable but several words are off; below 50: hard to follow or wrong sentence. Respond as JSON.` },
-      { inline_data:{ mime_type:'audio/wav', data: b64 } }
-    ]}],
-    generationConfig:{
-      thinkingConfig:{ thinkingLevel:'minimal' },
-      responseMimeType:'application/json',
-      responseSchema:{
-        type:'OBJECT',
-        properties:{
-          score:{type:'INTEGER', description:'0-100 per the scoring guide'},
-          passed:{type:'BOOLEAN', description:'true if the sentence is well pronounced overall (a mild accent is fine, no word stands out as wrong)'},
-          mistakes:{type:'ARRAY', description:'words that are mispronounced; empty if none',
-            items:{ type:'OBJECT', properties:{
-              word:{type:'STRING', description:'the exact word from the sentence'},
-              issue:{type:'STRING', description:'short, concrete tip on what was wrong, max 15 words'}
-            }, required:['word','issue'] } },
-          feedback:{type:'STRING', description:'one short overall tip in English, max 25 words'}
-        },
-        required:['score','passed','mistakes','feedback']
-      }
-    }
-  };
-}
-
-function mergeSentenceVerdicts(a, b){
-  const byWord = new Map();
-  [...(a.mistakes||[]), ...(b.mistakes||[])].forEach(m=>{
-    const k = (m.word||'').toLowerCase().trim();
-    if(k && !byWord.has(k)) byWord.set(k, {word:m.word, issue:m.issue||''});
-  });
-  return {
-    score: Math.round((a.score + b.score)/2),
-    passed: !!a.passed && !!b.passed,                 // both judges must agree it's clean
-    mistakes: [...byWord.values()],                   // union — surface anything either judge caught
-    feedback: (a.score<=b.score?a:b).feedback || a.feedback || b.feedback || ''
-  };
-}
-
-async function analyzeSentence(item, wavBuf){
-  const key = geminiKey();
-  if(!key) throw new Error('No Gemini key set.');
-  const body = buildSentenceBody(item.s, abToBase64(wavBuf));
-  const norm = v=>{
-    v.score = Math.max(0, Math.min(100, parseInt(v.score,10)||0));
-    v.passed = !!v.passed;
-    v.mistakes = Array.isArray(v.mistakes) ? v.mistakes.filter(m=>m && m.word) : [];
-    return v;
-  };
-  const settled = await Promise.allSettled([ gradeOnce(body, key).then(norm), gradeOnce(body, key).then(norm) ]);
-  const oks = settled.filter(s=>s.status==='fulfilled').map(s=>s.value);
-  if(!oks.length) throw (settled[0].reason || new Error('Grading failed.'));
-  return oks.length===2 ? mergeSentenceVerdicts(oks[0], oks[1]) : oks[0];
-}
 
 function highlightSentence(sentence, mistakes){
   let html = escapeHtml(sentence);
@@ -1325,6 +972,13 @@ function finishSpeak(){
   abortRecording();
   show('result');
   document.getElementById('bar').style.width='100%';
+  if(courseCtx){ finishCourseSpeak(); return; }
+
+  document.getElementById('resultRemy').style.display='none';
+  document.getElementById('nextLessonBtn').style.display='none';
+  document.getElementById('retryBtn').className='btn';
+  document.getElementById('retryBtn').textContent='Try again';
+  document.getElementById('retryBtn').onclick = ()=> startLevel(level);
   const unit = (speakMode==='sentences') ? 'sentences' : 'words';
   document.getElementById('finalScore').textContent = `${spassed} / ${speakDeck.length}`;
   const pct = spassed/speakDeck.length;
@@ -1352,6 +1006,926 @@ function finishSpeak(){
         ${r.v&&r.v.feedback?`<br><span style="color:var(--muted);font-size:.85rem">💡 ${escapeHtml(r.v.feedback)}</span>`:''}</div>`).join('');
   }
 }
+
+/* =========================================================================
+   RÉMY'S COURSE — the app's memory, a lesson path, and spaced review.
+
+   A "lesson" is one sound contrast (/u/ vs /y/, /ɔ̃/ vs /ɑ̃/ …). Lessons are
+   derived from the same data the free levels use — every question already
+   carries a `focus` like "/u/ vs /y/", so the contrast IS the lesson id.
+
+   The course is what makes the app remember you:
+   - clear a lesson (80%) and the next one unlocks;
+   - every later session quietly mixes in the sounds you've already learned,
+     picked more often the weaker they are, and drawn from harder material
+     (word → longer word → sentence) as they get stronger.
+   Everything lives in localStorage — no account, no server.
+   ========================================================================= */
+
+// "/u/ vs /y/" and "/y/ vs /u/" are the same lesson; canonicalise to one id.
+function contrastKey(focus){
+  const m = String(focus||'').match(/\/\s*([^/]+?)\s*\/\s*vs\s*\/\s*([^/]+?)\s*\//);
+  return m ? [m[1], m[2]].sort().join('~') : null;
+}
+
+// contrast id -> {1:[word items], 2:[longer words], 3:[sentences]}
+const POOLS = (()=>{
+  const p = {};
+  [[1,LEVEL1],[2,LEVEL2],[3,LEVEL3]].forEach(([tier, arr])=>{
+    arr.forEach(q=>{
+      const k = contrastKey(q.focus);
+      if(!k) return;
+      (p[k] || (p[k] = {1:[],2:[],3:[]}))[tier].push(q);
+    });
+  });
+  return p;
+})();
+
+// Teaching order: easy oral vowels first, the four nasals last — they're the
+// contrasts that stay hard longest, and they lean on the oral ones underneath.
+const COURSE_ORDER = [
+  '/a/ vs /o/', '/i/ vs /e/', '/e/ vs /ɛ/', '/u/ vs /o/', '/u/ vs /y/',
+  '/i/ vs /y/', '/ø/ vs /o/', '/u/ vs /ø/', '/œ/ vs /ø/', '/s/ vs /z/',
+  '/a/ vs /ɑ̃/', '/o/ vs /ɔ̃/', '/ɛ̃/ vs /ɔ̃/', '/ɔ̃/ vs /ɑ̃/', '/ɛ̃/ vs /ɑ̃/',
+  '/i/ vs /ɑ̃/', '/a/ vs /jɛ̃/',
+];
+
+/* Each sound lesson runs in up to three steps:
+     1 · 👂 Words       — hear the contrast in isolation      (Level 1 material)
+     2 · 👂 In context  — hear it inside longer words/sentences (Level 2 + 3)
+     3 · 🎤 Speak it    — say it yourself, graded by Gemini    (Level 4's grader)
+
+   Step 2 only exists when the contrast HAS longer material — a few (cou/queue,
+   lit/les) live only as single words, and a fake second step drawn from the same
+   handful of pairs would just be step 1 again.
+
+   Step 3 is optional by design: it needs a Gemini key, and the course must never
+   dead-end someone who doesn't have one. It pays extra gelato and takes the sound
+   to mastery instead. */
+const LESSONS = COURSE_ORDER.map(focus=>{
+  const key = contrastKey(focus);
+  const pool = POOLS[key];
+  if(!pool) return null;                                   // contrast not in the data
+  const sample = pool[1][0] || pool[2][0] || pool[3][0];
+
+  // step 1 = the shortest material there is; step 2 = everything longer than that
+  const a = pool[1].length ? pool[1] : (pool[2].length ? pool[2] : pool[3]);
+  let b = [];
+  if(a !== pool[3]) b = b.concat(pool[3]);
+  if(a !== pool[2]) b = b.concat(pool[2]);
+
+  return { key, focus, title: sample.o.join(' / '), pool, stepA:a, stepB:b.length ? b : null };
+}).filter(Boolean);
+
+// The 🎤 step for a lesson: every distinct word of the contrast, each carrying the
+// minimal-pair neighbour it gets confused with, which is what the grader listens for.
+function speakItemsFor(L){
+  const map = new Map();
+  L.stepA.forEach(q=> q.o.forEach((w,i)=>{
+    if(!map.has(w)) map.set(w, {w, ipa: IPA_MAP[w]||'', it: TRANS[w]||'', confusions:[]});
+    const other = q.o[q.o.length-1-i];
+    const e = map.get(w);
+    if(other && other!==w && !e.confusions.some(c=>c.w===other))
+      e.confusions.push({w:other, ipa: IPA_MAP[other]||''});
+  }));
+  return [...map.values()];
+}
+
+/* The ⚖️ law-aloud chapters (Level 5's material), split into short sets and
+   dropped into the path after every 5th sound. They unlock alongside the sounds
+   rather than gating them — they need a Gemini key too. */
+const LAW_CHAPTERS = (()=>{
+  const size = 5, out = [];
+  for(let i=0;i<LAW_SENTENCES.length;i+=size) out.push(LAW_SENTENCES.slice(i, i+size));
+  return out;
+})();
+const ROMAN = ['I','II','III','IV','V','VI'];
+// chapter c appears once this many sound lessons are cleared
+const LAW_AFTER = LAW_CHAPTERS.map((_,c)=> Math.min(LESSONS.length, (c+1)*5));
+
+// The path the learner actually sees: sounds, with law chapters slotted in.
+const PATH = (()=>{
+  const nodes = [];
+  LESSONS.forEach((L,i)=>{
+    nodes.push({ type:'sound', i });
+    LAW_AFTER.forEach((after, c)=>{ if(after === i+1) nodes.push({ type:'law', c }); });
+  });
+  return nodes;
+})();
+
+const SESSION_LEN = 12;
+const PASS_MARK = 0.8;          // listening steps
+const SPEAK_PASS = 0.7;         // spoken steps — a mild accent shouldn't fail you
+const SPEAK_STEP_LEN = 6;       // words in a 🎤 step
+
+/* ---- stored progress ---- */
+const PKEY = 'ecoute_progress_v1';
+// A factory, not a shared constant: `lessons` must be a fresh object every time,
+// or lp() would write the learner's records into the defaults themselves.
+function defaultProgress(){
+  return { v:2, gelato:0, streak:0, bestStreak:0, lastDay:null, lessons:{}, law:{}, hour:19, push:false };
+}
+let P = loadProgress();
+
+function loadProgress(){
+  let raw = {};
+  try{ raw = JSON.parse(localStorage.getItem(PKEY) || '{}') || {}; }catch(e){}
+  const p = Object.assign(defaultProgress(), raw);
+  p.lessons = Object.assign({}, raw.lessons || {});
+  p.law = Object.assign({}, raw.law || {});
+  return p;
+}
+function saveProgress(){
+  try{ localStorage.setItem(PKEY, JSON.stringify(P)); }catch(e){}
+}
+
+// Per-lesson record. s1/s2/sp hold the best score on each step (0 = never passed);
+// strength 0-5 drives how often — and how hard — a learned sound comes back.
+function lp(key){
+  const r = P.lessons[key] || (P.lessons[key] = {strength:0, seen:0, correct:0, s1:0, s2:0, sp:0});
+  // records written by v1 of the course, before steps existed
+  if(r.s1 === undefined){ r.s1 = r.done ? (r.best||PASS_MARK*100) : 0; r.s2 = 0; r.sp = 0; }
+  return r;
+}
+function lawRec(c){ return P.law[c] || (P.law[c] = {best:0}); }
+
+function stepPassed(L, step){
+  const r = lp(L.key);
+  if(step === 1) return r.s1 >= PASS_MARK*100;
+  if(step === 2) return !L.stepB || r.s2 >= PASS_MARK*100;   // no step 2 => nothing to fail
+  return r.sp >= SPEAK_PASS*100;
+}
+// "done" = the listening is solid. That's what unlocks the next sound.
+function lessonDone(L){ return stepPassed(L,1) && stepPassed(L,2); }
+// "mastered" = done, and you can say it too.
+function lessonMastered(L){ return lessonDone(L) && stepPassed(L,3); }
+function lawDone(c){ return lawRec(c).best >= SPEAK_PASS*100; }
+
+// The next step of a lesson that still needs doing (0 if the lesson is fully done).
+function nextStep(L){
+  if(!stepPassed(L,1)) return 1;
+  if(!stepPassed(L,2)) return 2;
+  if(!stepPassed(L,3)) return 3;
+  return 0;
+}
+
+function doneCount(){ return LESSONS.filter(lessonDone).length; }
+function masteredCount(){ return LESSONS.filter(lessonMastered).length; }
+function currentIdx(){
+  for(let i=0;i<LESSONS.length;i++) if(!lessonDone(LESSONS[i])) return i;
+  return LESSONS.length;                                   // every sound cleared
+}
+function lawUnlocked(c){ return doneCount() >= LAW_AFTER[c]; }
+function weakestIdx(){
+  let at = 0, low = 99;
+  LESSONS.forEach((l,i)=>{ const s = lp(l.key).strength; if(s < low){ low = s; at = i; } });
+  return at;
+}
+
+/* ---- days & streak ---- */
+function dayStr(d){ const z=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`; }
+function todayStr(){ return dayStr(new Date()); }
+function yesterdayStr(){ const d = new Date(); d.setDate(d.getDate()-1); return dayStr(d); }
+
+// The streak as it stands *now* — a stored streak you didn't feed yesterday is dead.
+function liveStreak(){
+  if(!P.lastDay) return 0;
+  return (P.lastDay === todayStr() || P.lastDay === yesterdayStr()) ? (P.streak||0) : 0;
+}
+function bumpStreak(){
+  const t = todayStr();
+  if(P.lastDay === t) return false;                        // already counted today
+  P.streak = (P.lastDay === yesterdayStr()) ? (P.streak||0) + 1 : 1;
+  P.lastDay = t;
+  P.bestStreak = Math.max(P.bestStreak||0, P.streak);
+  notifyPracticed();                                       // tell the server to stay quiet tonight
+  return true;
+}
+
+/* ---- building a lesson's deck ---- */
+function poolTier(pool, want){
+  const order = want===3 ? [3,2,1] : want===2 ? [2,3,1] : [1,2,3];
+  for(const t of order) if(pool[t] && pool[t].length) return pool[t];
+  return [];
+}
+// stronger sound -> harder material: single word, then longer word, then sentence
+function tierFor(strength){ return strength >= 5 ? 3 : strength >= 3 ? 2 : 1; }
+
+// Some contrasts only have one or two minimal pairs. Cycling the pool is fine:
+// render() re-randomises which half of the pair is spoken, so a repeat is a new
+// question, not the same one twice.
+function drawFrom(list, n){
+  const out = [];
+  while(out.length < n && list.length){
+    for(const it of shuffle(list)){
+      if(out.length >= n) break;
+      out.push(it);
+    }
+  }
+  return out;
+}
+function mkQ(q, key, review){
+  return { o:q.o.slice(), focus:q.focus, ipa:q.ipa, key, review };
+}
+
+/* The new material for a step.
+
+   Step 2 is the awkward one: a contrast like /a/ vs /o/ has exactly ONE sentence
+   pair in the data, so drawing step 2 purely from the "in context" pool gave a
+   3-question round of the same sentence three times. Instead we drill the context
+   items (cycled, but at least four questions' worth) and top the round up with the
+   step-1 words — which is what "the same sound, now in context" should feel like
+   anyway. Contrasts with plenty of context material never reach the top-up. */
+function newItemsFor(L, step, n){
+  if(step !== 2 || !L.stepB) return drawFrom(L.stepA, n);
+  const ctx = drawFrom(L.stepB, Math.min(n, Math.max(4, L.stepB.length*2)));
+  const rest = n - ctx.length;
+  return rest > 0 ? ctx.concat(drawFrom(L.stepA, rest)) : ctx;
+}
+
+function buildLessonDeck(i, step){
+  const L = LESSONS[i];
+  const own = (step === 2 && L.stepB) ? L.stepB : L.stepA;
+  const newCount = Math.min(8, own.length >= 4 ? 8 : Math.max(step === 2 ? 8 : 3, own.length*3));
+  const fresh = newItemsFor(L, step, newCount).map(q=>mkQ(q, L.key, false));
+
+  // Review: sounds already cleared. Weight 6-strength, so a shaky sound comes
+  // back five times as often as one you've nailed.
+  const learned = LESSONS.slice(0, i).filter(lessonDone);
+  const want = Math.min(SESSION_LEN - fresh.length, learned.length * 2);
+  const reviews = [];
+  if(want > 0 && learned.length){
+    const bag = [];
+    learned.forEach(l=>{
+      const w = 6 - Math.min(5, lp(l.key).strength);
+      for(let k=0;k<w;k++) bag.push(l);
+    });
+    for(let k=0;k<want;k++){
+      const l = bag[Math.floor(Math.random()*bag.length)];
+      const list = poolTier(l.pool, tierFor(lp(l.key).strength));
+      if(!list.length) continue;
+      reviews.push(mkQ(list[Math.floor(Math.random()*list.length)], l.key, true));
+    }
+  }
+  return shuffle(fresh.concat(reviews));
+}
+
+const STEP_NAME = {1:'👂 Words', 2:'👂 In context', 3:'🎤 Speak it'};
+
+// step 1/2 are listening rounds; step 3 hands off to the mic + Gemini flow
+function startLesson(i, step){
+  if(i < 0 || i >= LESSONS.length || i > currentIdx()) return;   // out of range or still locked
+  const L = LESSONS[i];
+  step = step || nextStep(L) || 1;
+  if(step === 2 && !L.stepB) step = 3;                            // this contrast has no middle step
+  if(step === 3) return startSpeakStep(i);
+
+  mode = 'lesson'; lessonIdx = i; lessonStep = step; courseCtx = null; level = 0;
+  deck = buildLessonDeck(i, step);
+  idx = 0; score = 0; missed = [];
+  show('quiz');
+  document.getElementById('levelLabel').textContent =
+    `Lesson ${i+1} · ${L.title} — ${STEP_NAME[step]}`;
+  render();
+}
+
+// step 3: reuse Level 4's recorder and grader, but on this lesson's own words
+function startSpeakStep(i){
+  const L = LESSONS[i];
+  mode = 'lesson'; lessonIdx = i; lessonStep = 3; level = 4;
+  courseCtx = { type:'speak', lesson:i };
+  speakMode = 'words';
+  document.getElementById('plabel').textContent = `Lesson ${i+1} · ${L.title} — 🎤 Speak it`;
+  show('pronounce');
+  if(!geminiKey()){ showKeyPanel(); return; }
+  beginCourseSpeakDeck();
+}
+
+function startLawLesson(c){
+  if(!lawUnlocked(c)) return;
+  mode = 'lesson'; lessonStep = 0; level = 5;
+  courseCtx = { type:'law', chapter:c };
+  speakMode = 'sentences';
+  document.getElementById('plabel').textContent = `⚖️ Law aloud ${ROMAN[c]}`;
+  show('pronounce');
+  if(!geminiKey()){ showKeyPanel(); return; }
+  beginCourseSpeakDeck();
+}
+
+function beginCourseSpeakDeck(){
+  document.getElementById('keyPanel').style.display = 'none';
+  document.getElementById('sentencePanel').style.display = 'none';
+  document.getElementById('speakPanel').style.display = '';
+  speakDeck = (courseCtx.type === 'law')
+    ? LAW_CHAPTERS[courseCtx.chapter].slice()
+    : shuffle(speakItemsFor(LESSONS[courseCtx.lesson])).slice(0, SPEAK_STEP_LEN);
+  sidx = 0; spassed = 0; sresults = []; passedSet = new Set();
+  renderSpeak();
+}
+
+// called from choose() on every answer inside a listening step
+function recordAnswer(key, ok, isReview){
+  if(!key) return;
+  const rec = lp(key);
+  rec.seen++;
+  if(ok) rec.correct++;
+  // Only reviews move strength: the lesson's own drills are how you learn it,
+  // reviews are the test of whether it stuck.
+  if(isReview && lessonDone(LESSONS.find(l=>l.key===key) || {key})){
+    rec.strength = ok ? Math.min(5, rec.strength + 1) : Math.max(1, rec.strength - 1);
+  }
+}
+
+/* One place decides what a finished course step is worth and what happens next,
+   so the listening steps and the spoken ones can't drift apart. */
+function settleStep({ L, step, passed, pct, scoreText, remyLine, detail, gelato }){
+  const wasDone = lessonDone(L);
+  const rec = lp(L.key);
+  const field = step === 1 ? 's1' : step === 2 ? 's2' : 'sp';
+  if(passed) rec[field] = Math.max(rec[field]||0, Math.round(pct*100));
+
+  const nowDone = lessonDone(L);
+  const firstClear = nowDone && !wasDone;
+  if(firstClear) rec.strength = Math.max(1, rec.strength);
+  else if(passed && step === 3) rec.strength = Math.min(5, rec.strength + 1);   // saying it is real proof
+
+  P.gelato += gelato;
+  const grew = bumpStreak();
+  saveProgress();
+
+  document.getElementById('finalScore').textContent = scoreText;
+  document.getElementById('resultMsg').textContent = detail;
+  document.getElementById('resultRemy').style.display = '';
+  document.getElementById('resultRemyLine').innerHTML = remyLine;
+  document.getElementById('resultStats').innerHTML =
+    `<span class="stat">+${gelato} 🍨</span>` +
+    `<span class="stat${liveStreak()?' hot':''}">🔥 ${liveStreak()} day${liveStreak()===1?'':'s'}${grew?' · +1':''}</span>` +
+    `<span class="stat">🎓 ${doneCount()} / ${LESSONS.length}</span>` +
+    (lessonMastered(L) ? `<span class="stat gold">★ mastered</span>` : '');
+
+  const retry = document.getElementById('retryBtn');
+  retry.className = passed ? 'btn ghost' : 'btn';
+  retry.textContent = passed ? 'Repeat step' : 'Try again';
+  retry.onclick = ()=> startLesson(lessonIdx, step);
+
+  // Where next? The lesson's own next step if it has one, else the next lesson.
+  const next = document.getElementById('nextLessonBtn');
+  const remaining = nextStep(L);
+  if(passed && remaining){
+    next.style.display = '';
+    next.textContent = `Step ${remaining} → ${STEP_NAME[remaining]}`;
+    next.onclick = ()=> startLesson(lessonIdx, remaining);
+  } else if(passed && lessonIdx + 1 < LESSONS.length){
+    const n = lessonIdx + 1;
+    next.style.display = '';
+    next.textContent = `Lesson ${n+1} → ${LESSONS[n].title}`;
+    next.onclick = ()=> startLesson(n);
+  } else if(passed){
+    next.style.display = '';
+    next.textContent = '🎓 Review a sound';
+    next.onclick = ()=> startLesson(weakestIdx(), 1);
+  } else {
+    next.style.display = 'none';
+  }
+
+  renderCourse();
+}
+
+function finishLesson(){
+  const L = LESSONS[lessonIdx];
+  const step = lessonStep;
+  const pct = deck.length ? score/deck.length : 0;
+  const passed = pct >= PASS_MARK;
+  const willFinishLesson = passed && !lessonDone(L) && !nextStepAfter(L, step);
+
+  settleStep({
+    L, step, passed, pct,
+    scoreText: `${score} / ${deck.length}`,
+    gelato: score*10 + (passed ? 50 : 0),
+    detail: passed
+      ? (willFinishLesson
+          ? `Sound learned. ${L.title} will keep coming back in later lessons so it doesn't fade.`
+          : `${STEP_NAME[step]} cleared.`)
+      : `A step needs ${Math.round(PASS_MARK*100)}% to clear. Replay each prompt with 🐢 Slow and listen for the vowel alone.`,
+    remyLine: passed
+      ? (willFinishLesson
+          ? `<b>Bravo !</b> ${escapeHtml(L.focus)} — you can hear it now. On le dit à voix haute ?`
+          : `<b>Très bien.</b> ${escapeHtml(L.focus)} is landing.`)
+      : `<b>Presque !</b> ${escapeHtml(L.focus)} is a stubborn one. On recommence ?`,
+  });
+
+  const ml = document.getElementById('missedList');
+  if(missed.length){
+    ml.innerHTML = `<p style="color:var(--muted);margin:0 0 8px">Sounds to review:</p>` +
+      missed.map(m=>`<div style="padding:8px 12px;background:var(--card2);border-radius:10px;margin-bottom:6px">
+        <span style="color:var(--accent2)">${escapeHtml(m.p)}</span>${TRANS[m.p]?` <span style="color:var(--muted);font-style:italic">— 🇮🇹 ${escapeHtml(TRANS[m.p])}</span>`:''}<br>
+        <span style="color:var(--muted);font-size:.85rem">${escapeHtml(m.ipa)} · ${escapeHtml(m.focus)}</span></div>`).join('');
+  } else {
+    ml.innerHTML = `<p style="color:var(--good);text-align:center">Not one mistake. 🎉</p>`;
+  }
+}
+
+// would clearing `step` still leave a *listening* step outstanding?
+function nextStepAfter(L, step){
+  if(step === 1 && L.stepB && !stepPassed(L,2)) return 2;
+  return 0;
+}
+
+/* The 🎤 steps and the ⚖️ law chapters both land here from finishSpeak(). */
+function finishCourseSpeak(){
+  const pct = speakDeck.length ? spassed/speakDeck.length : 0;
+  const passed = pct >= SPEAK_PASS;
+
+  if(courseCtx.type === 'law'){
+    const c = courseCtx.chapter;
+    const rec = lawRec(c);
+    const first = passed && !lawDone(c);
+    if(passed) rec.best = Math.max(rec.best, Math.round(pct*100));
+    const gelato = spassed*20 + (passed ? 100 : 0);
+    P.gelato += gelato;
+    const grew = bumpStreak();
+    saveProgress();
+
+    document.getElementById('finalScore').textContent = `${spassed} / ${speakDeck.length}`;
+    document.getElementById('resultMsg').textContent = passed
+      ? `Chapter cleared. Reading legal French aloud is the hardest thing in this app.`
+      : `You need ${Math.round(SPEAK_PASS*100)}% of the sentences to pass. Hear each one first, then copy its rhythm.`;
+    document.getElementById('resultRemy').style.display = '';
+    document.getElementById('resultRemyLine').innerHTML = passed
+      ? (first ? `<b>Maître du barreau !</b> ⚖️ Chapter ${ROMAN[c]} is yours.` : `<b>Toujours net.</b> Nothing has slipped.`)
+      : `<b>Courage !</b> Long sentences are a marathon. Écoute, puis répète.`;
+    document.getElementById('resultStats').innerHTML =
+      `<span class="stat">+${gelato} 🍨</span>` +
+      `<span class="stat${liveStreak()?' hot':''}">🔥 ${liveStreak()} day${liveStreak()===1?'':'s'}${grew?' · +1':''}</span>` +
+      `<span class="stat">⚖️ ${LAW_CHAPTERS.filter((_,x)=>lawDone(x)).length} / ${LAW_CHAPTERS.length}</span>`;
+
+    const retry = document.getElementById('retryBtn');
+    retry.className = passed ? 'btn ghost' : 'btn';
+    retry.textContent = passed ? 'Repeat chapter' : 'Try again';
+    retry.onclick = ()=> startLawLesson(c);
+
+    const next = document.getElementById('nextLessonBtn');
+    const cur = currentIdx();
+    if(passed && cur < LESSONS.length){
+      next.style.display = '';
+      next.textContent = `Lesson ${cur+1} → ${LESSONS[cur].title}`;
+      next.onclick = ()=> startLesson(cur);
+    } else next.style.display = 'none';
+
+    renderCourse();
+    return;
+  }
+
+  // 🎤 step of a sound lesson
+  const L = LESSONS[courseCtx.lesson];
+  settleStep({
+    L, step:3, passed, pct,
+    scoreText: `${spassed} / ${speakDeck.length}`,
+    gelato: spassed*15 + (passed ? 80 : 0),
+    detail: passed
+      ? `${L.title} — heard AND spoken. That sound is yours.`
+      : `You need ${Math.round(SPEAK_PASS*100)}% of the words to clear this. Tap 🔊 Hear it, then copy the vowel exactly.`,
+    remyLine: passed
+      ? `<b>★ Maîtrisé !</b> ${escapeHtml(L.focus)} — your mouth agrees with your ear.`
+      : `<b>Pas encore.</b> ${escapeHtml(L.focus)} is harder to say than to hear. Réessaie !`,
+  });
+}
+
+/* ---- the menu: Rémy, the stats, the path ---- */
+function remyLine(allDone, cur, streak){
+  if(allDone)
+    return `<b>Tout le programme !</b> Every sound in the course is yours. Now we keep them sharp — one review a day.`;
+  if(!P.lastDay)
+    return `Salut ! Je suis <b>Rémy</b>. On commence par le plus simple : <b>${escapeHtml(LESSONS[0].title)}</b>. Une leçon, et c'est tout.`;
+  if(P.lastDay === todayStr())
+    return `<b>Déjà fait aujourd'hui</b> — chapeau. Envie d'un tour de plus ?`;
+  if(streak > 0)
+    return `Your <b>${streak}-day streak</b> is waiting. Leçon ${cur+1} : <b>${escapeHtml(LESSONS[cur].title)}</b>.`;
+  return `Ça fait un moment ! On reprend doucement — leçon ${cur+1}, <b>${escapeHtml(LESSONS[cur].title)}</b>.`;
+}
+
+// which node's step list is expanded in the path
+let openNode = null;
+
+function stepRow(L, i, step, optional){
+  const done = stepPassed(L, step);
+  const rec = lp(L.key);
+  const score = step === 1 ? rec.s1 : step === 2 ? rec.s2 : rec.sp;
+  const needsKey = step === 3 && !geminiKey();
+  const note = done ? `best ${score}%`
+             : needsKey ? 'optional · needs a Gemini key'
+             : optional ? 'optional · +80 🍨'
+             : 'not yet cleared';
+  return `<button class="steprow${done?' done':''}" data-lesson="${i}" data-step="${step}">
+      <span class="sdot">${done ? '✓' : step}</span>
+      <span class="snt"><b>${STEP_NAME[step]}</b><span>${note}</span></span>
+    </button>`;
+}
+
+function renderCourse(){
+  const allDone = currentIdx() >= LESSONS.length;
+  const cur = Math.min(currentIdx(), LESSONS.length-1);
+  const streak = liveStreak();
+
+  const st = document.getElementById('statStreak');
+  st.textContent = `🔥 ${streak} day${streak===1?'':'s'}`;
+  st.classList.toggle('hot', streak > 0);
+  document.getElementById('statGelato').textContent = `🍨 ${P.gelato} gelato`;
+  document.getElementById('statDone').textContent =
+    `🎓 ${doneCount()} / ${LESSONS.length}${masteredCount() ? ` · ★ ${masteredCount()}` : ''}`;
+  document.getElementById('remyLine').innerHTML = remyLine(allDone, cur, streak);
+
+  const cb = document.getElementById('continueBtn');
+  if(allDone){
+    const w = weakestIdx();
+    const openLaw = LAW_CHAPTERS.findIndex((_,c)=> lawUnlocked(c) && !lawDone(c));
+    if(openLaw >= 0){
+      cb.textContent = `▶ Continue · ⚖️ Law aloud ${ROMAN[openLaw]}`;
+      cb.onclick = ()=> startLawLesson(openLaw);
+    } else {
+      cb.textContent = `🎓 Course complete — review ${LESSONS[w].title}`;
+      cb.onclick = ()=> startLesson(w, 1);
+    }
+  } else {
+    const step = nextStep(LESSONS[cur]) || 1;
+    cb.textContent = `${P.gelato > 0 ? '▶ Continue' : '▶ Start'} · Lesson ${cur+1} — ${STEP_NAME[step]}`;
+    cb.onclick = ()=> startLesson(cur, step);
+  }
+
+  const path = document.getElementById('path');
+  path.innerHTML = '';
+
+  PATH.forEach((node)=>{
+    if(node.type === 'law'){
+      const c = node.c;
+      const locked = !lawUnlocked(c);
+      const done = lawDone(c);
+      const b = document.createElement('button');
+      b.className = 'node law' + (done ? ' done' : '');
+      b.disabled = locked;
+      b.innerHTML =
+        `<span class="dot">${done ? '✓' : locked ? '🔒' : '⚖️'}</span>
+         <span class="nt">
+           <b>⚖️ Law aloud ${ROMAN[c]}</b>
+           <span>${LAW_CHAPTERS[c].length} sentences aloud · ${
+             done ? `best ${lawRec(c).best}%`
+                  : locked ? `unlocks after ${LAW_AFTER[c]} sounds`
+                  : geminiKey() ? 'optional · +100 🍨'
+                  : 'optional · needs a Gemini key'}</span>
+         </span>`;
+      if(!locked) b.onclick = ()=> startLawLesson(c);
+      path.appendChild(b);
+      return;
+    }
+
+    const i = node.i;
+    const L = LESSONS[i];
+    const rec = lp(L.key);
+    const locked = i > currentIdx();
+    const done = lessonDone(L);
+    const mastered = lessonMastered(L);
+    const steps = L.stepB ? [1,2,3] : [1,3];
+
+    const b = document.createElement('button');
+    b.className = 'node' + (done ? ' done' : '') + (mastered ? ' gold' : '') + (!allDone && i === cur ? ' current' : '');
+    b.disabled = locked;
+    b.innerHTML =
+      `<span class="dot">${mastered ? '★' : done ? '✓' : locked ? '🔒' : i+1}</span>
+       <span class="nt">
+         <b>${escapeHtml(L.title)}</b>
+         <span>${escapeHtml(L.focus)}${locked ? ' · locked' : ''}</span>
+       </span>
+       <span class="pips">${steps.map(s=>
+          `<i class="pip${stepPassed(L,s) ? ' on' : ''}">${s===3 ? '🎤' : '👂'}</i>`).join('')}</span>`;
+    if(!locked) b.onclick = ()=>{ openNode = (openNode === i) ? null : i; renderCourse(); };
+    path.appendChild(b);
+
+    // expanded: the lesson's steps, each launchable on its own
+    if(openNode === i && !locked){
+      const panel = document.createElement('div');
+      panel.className = 'steps';
+      panel.innerHTML = steps.map(s=> stepRow(L, i, s, s===3)).join('');
+      panel.querySelectorAll('.steprow').forEach(r=>{
+        r.onclick = ()=> startLesson(+r.dataset.lesson, +r.dataset.step);
+      });
+      path.appendChild(panel);
+    }
+  });
+}
+
+document.getElementById('resetBtn').onclick = (e)=>{
+  e.preventDefault();
+  if(!confirm('Reset every lesson, your gelato and your streak? Rémy will start you again from lesson 1.')) return;
+  P = defaultProgress();
+  saveProgress();
+  renderCourse();
+};
+
+/* =========================================================================
+   INSTALL + DAILY REMINDERS
+   A PWA can't schedule its own notification (the Notification Triggers API was
+   never shipped), so the nudge is a real web push: the browser subscribes, the
+   endpoint goes to /api/subscribe, and an hourly Netlify function decides — per
+   learner, in their own timezone — whether tonight deserves a ping.
+   ========================================================================= */
+let swReg = null, deferredInstall = null, pushKey = null, pushReady = false;
+
+const remToggle  = document.getElementById('remToggle');
+const remHourRow = document.getElementById('remHourRow');
+const remHourSel = document.getElementById('remHour');
+const remSubEl   = document.getElementById('remSub');
+
+for(let h=0; h<24; h++){
+  const o = document.createElement('option');
+  o.value = h; o.textContent = String(h).padStart(2,'0') + ':00';
+  remHourSel.appendChild(o);
+}
+function setRemSub(t){ remSubEl.textContent = t; }
+function hhmm(){ return String(P.hour).padStart(2,'0') + ':00'; }
+
+// VAPID keys travel as base64url; PushManager wants raw bytes.
+function b64ToBytes(b64){
+  const pad = '='.repeat((4 - b64.length % 4) % 4);
+  const raw = atob((b64 + pad).replace(/-/g,'+').replace(/_/g,'/'));
+  const out = new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+window.addEventListener('load', async ()=>{
+  if('serviceWorker' in navigator && location.protocol !== 'file:'){
+    try{
+      swReg = await navigator.serviceWorker.register('/sw.js');
+      watchForUpdates();
+    }catch(e){ swReg = null; }
+  }
+  initReminders();
+});
+
+/* =========================================================================
+   STAYING ON THE LATEST CODE
+   An installed PWA runs from the service worker's cache, so a deploy doesn't
+   reach it by itself. Two paths back to fresh code:
+
+   - Automatic: a new sw.js installs in the background and waits. We show the
+     "new version ready" banner and let the learner reload when they're not
+     mid-lesson — taking over uninvited would kill the round they're playing.
+   - Manual: "Check for updates" asks the worker to re-fetch the shell straight
+     from the network. That catches a deploy that only touched the HTML, which
+     leaves sw.js byte-identical and so raises no update event at all.
+   ========================================================================= */
+const APP_VERSION = '1.2.0';
+let waitingWorker = null, updateRequested = false, reloading = false;
+
+document.getElementById('updVer').textContent = 'Écoute v' + APP_VERSION;
+
+function showUpdateBanner(worker){
+  waitingWorker = worker;
+  document.getElementById('updBanner').style.display = 'flex';
+}
+
+function watchForUpdates(){
+  // an update downloaded on a previous visit and is still parked
+  if(swReg.waiting && navigator.serviceWorker.controller) showUpdateBanner(swReg.waiting);
+
+  swReg.addEventListener('updatefound', ()=>{
+    const w = swReg.installing;
+    if(!w) return;
+    w.addEventListener('statechange', ()=>{
+      // a controller already exists => this is an update, not the first install
+      if(w.state === 'installed' && navigator.serviceWorker.controller) showUpdateBanner(w);
+    });
+  });
+
+  navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+    // Fires on the very first install too (activate calls clients.claim), so only
+    // reload when the learner actually asked for the update.
+    if(!updateRequested || reloading) return;
+    reloading = true;
+    location.reload();
+  });
+
+  swReg.update().catch(()=>{});
+  document.addEventListener('visibilitychange', ()=>{
+    if(!document.hidden && swReg) swReg.update().catch(()=>{});
+  });
+}
+
+document.getElementById('updNow').onclick = ()=>{
+  updateRequested = true;
+  if(waitingWorker){
+    waitingWorker.postMessage({ type:'SKIP_WAITING' });
+    // if controllerchange never lands, reload anyway rather than hang
+    setTimeout(()=>{ if(!reloading){ reloading = true; location.reload(); } }, 2000);
+  } else {
+    location.reload();
+  }
+};
+
+// Ask the worker to re-pull the shell past every cache. Resolves true if the
+// bytes actually changed.
+function refreshShell(){
+  return new Promise((resolve)=>{
+    const sw = navigator.serviceWorker.controller;
+    if(!sw) return resolve(false);
+    const done = (v)=>{ navigator.serviceWorker.removeEventListener('message', onMsg); clearTimeout(t); resolve(v); };
+    const onMsg = (e)=>{ if(e.data && e.data.type === 'REFRESHED') done(!!e.data.changed); };
+    const t = setTimeout(()=> done(false), 8000);
+    navigator.serviceWorker.addEventListener('message', onMsg);
+    sw.postMessage({ type:'REFRESH' });
+  });
+}
+
+document.getElementById('updCheck').onclick = async ()=>{
+  const btn = document.getElementById('updCheck');
+  const reset = (txt)=>{ btn.textContent = txt; setTimeout(()=>{ btn.textContent = '⟳ Check for updates'; btn.disabled = false; }, 2200); };
+  btn.disabled = true;
+  btn.textContent = 'Checking…';
+
+  if(!swReg){ location.reload(); return; }        // no worker: a plain reload is the update
+
+  try{
+    await swReg.update();                          // did sw.js itself change?
+    if(swReg.waiting){
+      showUpdateBanner(swReg.waiting);
+      btn.textContent = 'Update ready ↑';
+      btn.disabled = false;
+      return;
+    }
+    // Same worker, but the HTML may still have moved underneath it.
+    if(await refreshShell()){
+      updateRequested = true; reloading = true;
+      location.reload();
+      return;
+    }
+    reset('✓ Up to date');
+  }catch(e){
+    reset('Check failed');
+  }
+};
+
+async function initReminders(){
+  remHourSel.value = String(P.hour);
+
+  if(!swReg || !('Notification' in window) || !('PushManager' in window)){
+    remToggle.disabled = true;
+    setRemSub(location.protocol === 'file:'
+      ? 'Browsers block notifications on file:// pages — open the app over http(s).'
+      : 'This browser can’t receive push notifications. Chrome on Android works best.');
+    return;
+  }
+
+  let info = null;
+  try{ info = await (await fetch('/api/push-key')).json(); }catch(e){}
+  if(!info || !info.configured){
+    remToggle.disabled = true;
+    setRemSub('Reminders are off on this deploy — the site needs VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY set.');
+    return;
+  }
+  pushKey = info.key;
+  pushReady = true;
+
+  const sub = await swReg.pushManager.getSubscription();
+  const on = !!sub && Notification.permission === 'granted';
+  P.push = on; saveProgress();
+  remToggle.checked = on;
+  remHourRow.style.display = on ? '' : 'none';
+  setRemSub(on
+    ? `Rémy will ping you at ${hhmm()} — unless you've already practised that day.`
+    : 'Let Rémy nudge you once a day, so the streak survives.');
+  if(on) syncSubscription();          // refresh timezone / hour / last practice
+}
+
+remToggle.onchange = async ()=>{
+  if(remToggle.checked){
+    setRemSub('Asking your browser…');
+    try{ await enableReminders(); }
+    catch(err){
+      remToggle.checked = false;
+      remHourRow.style.display = 'none';
+      setRemSub(String((err && err.message) || err));
+    }
+  } else {
+    await disableReminders();
+  }
+};
+
+remHourSel.onchange = async ()=>{
+  P.hour = parseInt(remHourSel.value, 10);
+  saveProgress();
+  await syncSubscription();
+  setRemSub(`C'est noté — Rémy will ping you at ${hhmm()}.`);
+};
+
+async function enableReminders(){
+  const perm = await Notification.requestPermission();
+  if(perm !== 'granted')
+    throw new Error(perm === 'denied'
+      ? 'Notifications are blocked for this site. Allow them in your browser settings, then flip this back on.'
+      : 'Notification permission was dismissed.');
+
+  const sub = await swReg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: b64ToBytes(pushKey),
+  });
+  const res = await fetch('/api/subscribe', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(subPayload(sub)),
+  });
+  if(!res.ok) throw new Error('Could not register this device for reminders.');
+
+  P.push = true;
+  P.hour = parseInt(remHourSel.value, 10);
+  saveProgress();
+  remHourRow.style.display = '';
+  setRemSub(`C'est noté — Rémy will ping you at ${hhmm()}.`);
+}
+
+async function disableReminders(){
+  const sub = swReg && await swReg.pushManager.getSubscription();
+  if(sub){
+    await fetch('/api/unsubscribe', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ endpoint: sub.endpoint }),
+    }).catch(()=>{});
+    await sub.unsubscribe().catch(()=>{});
+  }
+  P.push = false;
+  saveProgress();
+  remHourRow.style.display = 'none';
+  setRemSub('Reminders off. Rémy will wait quietly.');
+}
+
+function subPayload(sub){
+  return {
+    subscription: sub.toJSON(),
+    tzOffset: new Date().getTimezoneOffset(),
+    hour: parseInt(remHourSel.value, 10),
+    lastPracticeDate: P.lastDay,
+    streak: liveStreak(),
+  };
+}
+
+async function syncSubscription(){
+  if(!pushReady || !swReg) return;
+  const sub = await swReg.pushManager.getSubscription();
+  if(!sub) return;
+  fetch('/api/subscribe', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(subPayload(sub)),
+  }).catch(()=>{});
+}
+
+// Fired the moment a lesson lands: today is covered, so skip tonight's nudge.
+async function notifyPracticed(){
+  if(!P.push || !swReg) return;
+  const sub = await swReg.pushManager.getSubscription();
+  if(!sub) return;
+  fetch('/api/practiced', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      endpoint: sub.endpoint,
+      localDate: todayStr(),
+      streak: liveStreak(),
+      tzOffset: new Date().getTimezoneOffset(),
+    }),
+  }).catch(()=>{});
+}
+
+document.getElementById('remTest').onclick = async (e)=>{
+  e.preventDefault();
+  const sub = swReg && await swReg.pushManager.getSubscription();
+  if(!sub){ setRemSub('Turn reminders on first.'); return; }
+  setRemSub('Sending a test…');
+  try{
+    const res = await fetch('/api/test-push', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ endpoint: sub.endpoint }),
+    });
+    const j = await res.json().catch(()=>({}));
+    setRemSub(res.ok ? 'Sent — it should land in a second.' : (j.error || 'The test push failed.'));
+  }catch(err){
+    setRemSub('The test push failed: ' + ((err && err.message) || err));
+  }
+};
+
+/* ---- "Install" (Chrome fires this only when the PWA is installable) ---- */
+const installBtn = document.getElementById('installBtn');
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredInstall = e;
+  installBtn.style.display = 'block';
+});
+installBtn.onclick = async ()=>{
+  if(!deferredInstall) return;
+  deferredInstall.prompt();
+  await deferredInstall.userChoice;
+  deferredInstall = null;
+  installBtn.style.display = 'none';
+};
+window.addEventListener('appinstalled', ()=>{ installBtn.style.display = 'none'; });
+
+renderCourse();
 
 // keyboard: space replays, 1/2/3 choose
 document.addEventListener('keydown',e=>{

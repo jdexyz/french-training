@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Notification badge. Android renders this as a flat monochrome mask in the
+       status bar, so it must be a single solid silhouette on transparency. -->
+  <path d="M256 236
+           q-44 -24 -92 -21
+           q-50 3 -68 33
+           q-15 27 9 42
+           q24 15 45 -6
+           q-24 6 -33 -9
+           q-9 -18 15 -27
+           q36 -15 74 6
+           q21 12 50 12
+           q29 0 50 -12
+           q38 -21 74 -6
+           q24 9 15 27
+           q-9 15 -33 9
+           q21 21 45 6
+           q24 -15 9 -42
+           q-18 -30 -68 -33
+           q-48 -3 -92 21 z"
+        fill="#ffffff"/>
+</svg>
