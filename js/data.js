@@ -301,3 +301,5 @@ const SENT_EXAMPLES = [
   "Les grenouilles vertes coassent au bord de l'étang.",
   "Mon oncle habite un vieux village au cœur des montagnes."
 ];
+
+export { LEVEL1, LEVEL2, LEVEL3, TRANS, ODD, LAW_SENTENCES, LAW_LEN, SENT_EXAMPLES };

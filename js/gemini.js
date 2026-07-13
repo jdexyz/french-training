@@ -13,6 +13,8 @@ const SPEAK_LEN = 10;                          // words per round
 function geminiKey(){ return localStorage.getItem('ecoute_gemini_key') || ''; }
 function setGeminiKey(k){ localStorage.setItem('ecoute_gemini_key', k.trim()); }
 
+import { abToBase64 } from './util.js';
+
 function buildGradeBody(item, b64){
   const word = item.w, ipa = item.ipa;
   const conf = item.confusions || [];
@@ -157,3 +159,5 @@ async function analyzeSentence(item, wavBuf){
   if(!oks.length) throw (settled[0].reason || new Error('Grading failed.'));
   return oks.length===2 ? mergeSentenceVerdicts(oks[0], oks[1]) : oks[0];
 }
+
+export { GEMINI_MODEL, SPEAK_LEN, geminiKey, setGeminiKey, analyzePronunciation, analyzeSentence };

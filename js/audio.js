@@ -129,3 +129,5 @@ function speak(text, slow){
     speakSystem(text, !!slow);
   });
 }
+
+export { speak, setToast, buildVoiceList };

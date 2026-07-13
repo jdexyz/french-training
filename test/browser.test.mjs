@@ -55,7 +55,7 @@ await page.waitForTimeout(300);
 /* answer every question of a listening round correctly */
 async function playQuiz() {
   for (;;) {
-    const answer = await page.evaluate(() => deck[idx].p);
+    const answer = await page.evaluate(() => __ecoute.S.deck[__ecoute.S.idx].p);
     const opts = page.locator('.opt');
     for (let i = 0; i < await opts.count(); i++) {
       if ((await opts.nth(i).locator('.fr2').innerText()).trim() === answer) { await opts.nth(i).click(); break; }
@@ -73,7 +73,7 @@ async function playSpeak() {
     await page.waitForTimeout(250);
     await page.locator('#recBtn').click();
     await page.waitForFunction(() => !document.getElementById('pNext').disabled, null, { timeout: 15000 });
-    const last = await page.evaluate(() => sidx === speakDeck.length - 1);
+    const last = await page.evaluate(() => __ecoute.S.sidx === __ecoute.S.speakDeck.length - 1);
     await page.locator('#pNext').click();
     if (last) return;
   }
@@ -92,19 +92,19 @@ await page.waitForSelector('#quiz:visible');
 t.ok((await page.locator('#levelLabel').innerText()).includes('👂 Words'), 'step 1 label');
 await playQuiz();
 await page.waitForSelector('#result:visible');
-t.ok(await page.evaluate(() => currentIdx() === 0), 'lesson 2 still locked after only step 1');
+t.ok(await page.evaluate(() => __ecoute.currentIdx() === 0), 'lesson 2 still locked after only step 1');
 t.ok((await page.locator('#nextLessonBtn').innerText()).includes('In context'), 'it offers step 2 next');
 
 t.section('lesson 1 · step 2 (the same sound in context)');
 await page.locator('#nextLessonBtn').click();
 await page.waitForSelector('#quiz:visible');
-const fresh = await page.evaluate(() => deck.filter((q) => !q.review).length);
+const fresh = await page.evaluate(() => __ecoute.S.deck.filter((q) => !q.review).length);
 t.ok(fresh >= 8, `step 2 is a full round, not three repeats of one sentence (${fresh} new questions)`);
 await playQuiz();
 await page.waitForSelector('#result:visible');
-t.ok(await page.evaluate(() => lessonDone(LESSONS[0])), 'listening done -> lesson cleared');
-t.ok(await page.evaluate(() => currentIdx() === 1), 'lesson 2 unlocked WITHOUT the mic step');
-t.ok(!(await page.evaluate(() => lessonMastered(LESSONS[0]))), 'not mastered yet');
+t.ok(await page.evaluate(() => __ecoute.lessonDone(__ecoute.LESSONS[0])), 'listening done -> lesson cleared');
+t.ok(await page.evaluate(() => __ecoute.currentIdx() === 1), 'lesson 2 unlocked WITHOUT the mic step');
+t.ok(!(await page.evaluate(() => __ecoute.lessonMastered(__ecoute.LESSONS[0]))), 'not mastered yet');
 
 t.section('lesson 1 · step 3 (say it)');
 await page.locator('#nextLessonBtn').click();
@@ -112,7 +112,7 @@ await page.waitForSelector('#pronounce:visible');
 t.ok((await page.locator('#plabel').innerText()).includes('🎤'), 'mic step label');
 await playSpeak();
 await page.waitForSelector('#result:visible');
-t.ok(await page.evaluate(() => lessonMastered(LESSONS[0])), 'the sound is mastered');
+t.ok(await page.evaluate(() => __ecoute.lessonMastered(__ecoute.LESSONS[0])), 'the sound is mastered');
 t.ok((await page.locator('#resultStats').innerText()).includes('mastered'), 'the result says so');
 
 await page.locator('#result .btn.ghost').first().click();
@@ -124,14 +124,15 @@ t.section('law chapters unlock alongside, and never gate a sound');
 const law = page.locator('.node.law').first();
 t.ok(await law.isDisabled(), 'law I is locked before 5 sounds');
 await page.evaluate(() => {
+  const { lp, LESSONS, saveProgress, renderCourse } = __ecoute;
   for (let i = 0; i < 5; i++) { const r = lp(LESSONS[i].key); r.s1 = 100; r.s2 = 100; r.strength = 2; }
   saveProgress(); renderCourse();
 });
 t.ok(!(await law.isDisabled()), 'law I opens once 5 sounds are cleared');
-t.ok(await page.evaluate(() => currentIdx() === 5), 'and lesson 6 is reachable with law I untouched');
+t.ok(await page.evaluate(() => __ecoute.currentIdx() === 5), 'and lesson 6 is reachable with law I untouched');
 await law.click();
 await page.waitForSelector('#pronounce:visible');
-t.eq(await page.evaluate(() => speakDeck.length), 5, 'law I holds 5 sentences');
+t.eq(await page.evaluate(() => __ecoute.S.speakDeck.length), 5, 'law I holds 5 sentences');
 await page.locator('#pronounce .btn.ghost').first().click();
 
 t.section('the free levels still work, untouched by the course');
@@ -139,10 +140,10 @@ await page.waitForSelector('#menu:visible');
 await page.evaluate(() => (document.querySelector('details.free').open = true));
 await page.locator('.lvl').first().click();
 await page.waitForSelector('#quiz:visible');
-t.eq(await page.evaluate(() => mode), 'free', 'a free level is not a lesson');
-t.eq(await page.evaluate(() => deck.length), 20, 'Level 1 is still a 20-question round');
-t.ok(await page.evaluate(() => deck.every((q) => !q.review)), 'free levels never inject course reviews');
-await page.evaluate(() => { idx = deck.length - 1; finish(); });
+t.eq(await page.evaluate(() => __ecoute.S.mode), 'free', 'a free level is not a lesson');
+t.eq(await page.evaluate(() => __ecoute.S.deck.length), 20, 'Level 1 is still a 20-question round');
+t.ok(await page.evaluate(() => __ecoute.S.deck.every((q) => !q.review)), 'free levels never inject course reviews');
+await page.evaluate(() => { __ecoute.S.idx = __ecoute.S.deck.length - 1; __ecoute.finish(); });
 await page.waitForSelector('#result:visible');
 t.ok(await page.locator('#resultRemy').isHidden(), 'Rémy stays out of the free-level result');
 t.eq(await page.locator('#retryBtn').innerText(), 'Try again', 'the retry button is not left over from a lesson');

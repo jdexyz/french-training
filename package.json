@@ -2,6 +2,7 @@
   "name": "french-training",
   "version": "1.1.0",
   "private": true,
+  "type": "module",
   "description": "Écoute — an installable French sound trainer: a lesson-by-lesson course with spaced review, a microphone + Gemini pronunciation grader, and daily push reminders from Rémy.",
   "scripts": {
     "start": "npx --yes netlify-cli dev",
@@ -10,7 +11,7 @@
     "test": "node test/course.test.mjs && node test/reminder.test.mjs",
     "test:browser": "node test/browser.test.mjs",
     "test:all": "npm test && npm run test:browser",
-    "vapid": "node -e \"const k=require('web-push').generateVAPIDKeys();console.log('VAPID_PUBLIC_KEY=%s\\nVAPID_PRIVATE_KEY=%s',k.publicKey,k.privateKey)\"",
+    "vapid": "node --input-type=commonjs -e \"const k=require('web-push').generateVAPIDKeys();console.log('VAPID_PUBLIC_KEY=%s\\nVAPID_PRIVATE_KEY=%s',k.publicKey,k.privateKey)\"",
     "icons": "magick -background none remy.svg -resize 192x192 icons/icon-192.png && magick -background none remy.svg -resize 512x512 icons/icon-512.png && magick -background none remy.svg -resize 180x180 -background '#7c8cff' -flatten icons/apple-touch-icon.png && magick -size 512x512 xc:'#7c8cff' \\( -background none remy.svg -resize 410x410 \\) -gravity center -composite icons/icon-maskable-512.png && magick -background none badge.svg -resize 96x96 icons/badge-96.png"
   },
   "dependencies": {

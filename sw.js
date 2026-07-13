@@ -10,14 +10,22 @@
    byte-comparing this file, so if VERSION doesn't change, a deploy that only
    touched the HTML raises no "update available" signal at all. */
 
-const VERSION = '1.2.0';
+const VERSION = '2.0.0';
 const CACHE = 'ecoute-' + VERSION;
 const SHELL = [
   '/',
   '/french-sounds.html',
-  '/js/data.js',
+  '/js/app.js',
   '/js/audio.js',
+  '/js/course.js',
+  '/js/data.js',
   '/js/gemini.js',
+  '/js/lesson.js',
+  '/js/menu.js',
+  '/js/quiz.js',
+  '/js/speak.js',
+  '/js/state.js',
+  '/js/util.js',
   '/manifest.webmanifest',
   '/remy.svg',
   '/icons/icon-192.png',

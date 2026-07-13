@@ -198,12 +198,26 @@ service-worker update path. Together, 166 assertions.
 
 ## Files
 
-- `french-sounds.html` — the app: quiz, course engine, speak flow, UI.
-- `js/data.js` — **all the teaching content.** Add a minimal pair here and the
-  course picks it up on its own: the `focus` field (`"/u/ vs /y/"`) *is* the
-  lesson id. No app code to touch.
-- `js/audio.js` — the voice engine (Google TTS + system voices, with fallback).
-- `js/gemini.js` — the pronunciation grader: API key, prompts, dual-judge scoring.
+`french-sounds.html` is now markup and CSS only. It loads one ES module,
+`js/app.js`, which pulls in the rest. **There is still no build step** — the
+browser loads the modules directly; nothing is compiled, bundled or transpiled.
+
+| File | What |
+| --- | --- |
+| `js/data.js` | **All the teaching content.** Add a minimal pair here and the course picks it up on its own: the `focus` field (`"/u/ vs /y/"`) *is* the lesson id. No app code to touch. |
+| `js/state.js` | The state a running round lives in — one object, on purpose (see below). |
+| `js/course.js` | The course model *and* progress: lessons, steps, gating, spaced review, streak. Derived from the data, not hand-written. |
+| `js/quiz.js` | The listening rounds (free levels 1–3 and the course's 👂 steps). |
+| `js/speak.js` | The mic flow: recorder, verdicts (levels 4–6 and the 🎤 / ⚖️ steps). |
+| `js/lesson.js` | The course controller: what finishing a step does. |
+| `js/menu.js` | Rémy, the stats, the lesson path. |
+| `js/audio.js` | The voice engine (Google TTS + system voices, with fallback). |
+| `js/gemini.js` | The grader: API key, prompts, dual-judge scoring. |
+| `js/app.js` | The entry point: service worker, updates, reminders, install, boot. |
+| `js/util.js` | Shuffle, escape, dates. |
+
+Other pieces:
+
 - `remy.svg`, `badge.svg`, `icons/` — Rémy, and the icon set generated from him
   (`npm run icons` regenerates the PNGs; needs ImageMagick).
 - `manifest.webmanifest`, `sw.js` — what makes it installable and push-capable.
@@ -212,6 +226,17 @@ service-worker update path. Together, 166 assertions.
 - `netlify/lib/push.mjs` — shared push plumbing and the "should we nudge?" rule.
 - `netlify.toml` — publish settings, the root rewrite, and the `/api/*` routes.
 
-`js/*.js` are plain classic scripts loaded before the app — they share one global
-scope on purpose. That keeps the zero-build, zero-toolchain property: nothing here
-is compiled, bundled, or transpiled.
+### Why the state is one object
+
+`js/state.js` exports a single `S`. That isn't stylistic. These fields (`deck`,
+`idx`, `score`, `mode`, `speakDeck`…) used to be a dozen module-level `let`s that
+the quiz, the speak flow and the course controller all assigned to — and **ES
+module imports are read-only bindings**, so `lesson.js` cannot do `deck = …` to a
+`deck` it imported from `quiz.js`. The split forces the state to be owned
+somewhere and reached through, which is also what stops the class of bug that
+shared globals kept producing (a retry handler leaking between the course and
+free practice).
+
+The rule: anything describing *"what round am I in, and where am I in it"* lives
+in `S`. Anything owned by one module (the recorder's audio nodes, the service
+worker registration) stays private to that module.
