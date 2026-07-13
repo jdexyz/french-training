@@ -140,7 +140,7 @@ await page.locator('#pronounce .btn.ghost').first().click();
 
 t.section('the free levels still work, untouched by the course');
 await page.waitForSelector('#menu:visible');
-await page.evaluate(() => (document.querySelector('details.free').open = true));
+t.eq(await page.locator('.lvl:visible').count(), 6, 'all six free levels are visible without unfolding anything');
 await page.locator('.lvl').first().click();
 await page.waitForSelector('#quiz:visible');
 t.eq(await page.evaluate(() => __ecoute.S.mode), 'free', 'a free level is not a lesson');

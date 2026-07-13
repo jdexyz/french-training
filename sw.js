@@ -10,7 +10,7 @@
    byte-comparing this file, so if VERSION doesn't change, a deploy that only
    touched the HTML raises no "update available" signal at all. */
 
-const VERSION = '2.1.0';
+const VERSION = '2.1.1';
 const CACHE = 'ecoute-' + VERSION;
 const SHELL = [
   '/',

@@ -22,28 +22,39 @@
     --text:#eef0ff; --muted:#a7adcf; --line:#33386b;
   }
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%}
+  html,body{margin:0}
+  html{background:var(--bg)}
   body{
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    background:radial-gradient(1200px 800px at 70% -10%,#202552 0%,var(--bg) 55%);
-    color:var(--text); min-height:100%; display:flex; flex-direction:column; align-items:center;
+    color:var(--text); min-height:100vh; display:flex; flex-direction:column; align-items:center;
     padding:24px 16px 48px;
+  }
+  /* The glow is a fixed layer, not a background on <body>.
+     As a background it tiled: the body box is one viewport tall while the page
+     runs to several thousand pixels, and background-repeat defaults to repeat —
+     so the glow reappeared every screenful, with a visible seam between copies. */
+  body::before{
+    content:"";
+    position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background:radial-gradient(1200px 800px at 70% -10%,#202552 0%,var(--bg) 55%);
   }
   .wrap{width:100%;max-width:680px}
   header{text-align:center;margin-bottom:18px}
   h1{font-size:1.7rem;margin:0 0 4px;letter-spacing:.5px}
   h1 .fr{color:var(--accent2)}
   .sub{color:var(--muted);font-size:.95rem;margin:0}
-  .levels{display:flex;gap:10px;justify-content:center;margin:18px 0 8px;flex-wrap:wrap}
+  /* Deliberately compact: the free levels stay in reach, but they must not
+     compete with the course path above them. */
+  .levels{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin:0 0 8px}
   .lvl{
-    flex:1;min-width:200px;background:var(--card);border:1px solid var(--line);
-    border-radius:16px;padding:16px;cursor:pointer;transition:.15s;text-align:left
+    background:var(--card);border:1px solid var(--line);
+    border-radius:12px;padding:10px 12px;cursor:pointer;transition:.12s;text-align:left
   }
-  .lvl:hover{transform:translateY(-2px);border-color:var(--accent)}
-  .lvl h3{margin:0 0 6px;font-size:1.1rem}
-  .lvl p{margin:0;color:var(--muted);font-size:.88rem}
-  .lvl .tag{display:inline-block;margin-top:10px;font-size:.78rem;color:var(--accent2);
-    background:#13314a;padding:3px 9px;border-radius:999px}
+  .lvl:hover{transform:translateY(-1px);border-color:var(--accent)}
+  .lvl h3{margin:0;font-size:.92rem;font-weight:600}
+  .lvl p{display:none}                    /* the course explains these; the title is enough here */
+  .lvl .tag{display:inline-block;margin-top:5px;font-size:.7rem;color:var(--accent2);
+    background:#13314a;padding:2px 7px;border-radius:999px}
 
   .card{background:var(--card);border:1px solid var(--line);border-radius:20px;
     padding:22px;margin-top:14px}
@@ -209,8 +220,11 @@
   .steprow .snt span{display:block;font-size:.76rem;color:var(--muted);margin-top:1px}
   .stat.gold{color:#f0c877;border-color:#d9a441}
 
-  .section-title{display:flex;justify-content:space-between;align-items:baseline;margin:22px 0 6px}
-  .section-title h2{font-size:1rem;margin:0;color:var(--muted);font-weight:600;letter-spacing:.4px;text-transform:uppercase}
+  /* A real break between Rémy's course and the free levels below it — the course
+     is the app, the levels are the workshop behind it. */
+  .section-title{margin:38px 0 12px;padding-top:26px;border-top:2px solid var(--line);text-align:center}
+  .section-title h2{font-size:.95rem;margin:0;color:var(--accent2);font-weight:700;letter-spacing:1.2px;text-transform:uppercase}
+  .section-title > span{display:block;margin-top:4px;font-size:.84rem;color:var(--muted)}
   .section-title a{font-size:.8rem}
 
   /* reminders */
@@ -230,11 +244,6 @@
   .switch input:checked + .slider:before{transform:translateX(21px);background:#fff}
   .switch input:disabled + .slider{opacity:.4;cursor:not-allowed}
 
-  details.free{margin-top:8px}
-  details.free > summary{cursor:pointer;color:var(--muted);font-size:.9rem;padding:10px 0;list-style:none}
-  details.free > summary::-webkit-details-marker{display:none}
-  details.free > summary:before{content:"▸ ";color:var(--accent)}
-  details.free[open] > summary:before{content:"▾ "}
 
   .chip{display:inline-block;font-size:.7rem;padding:2px 8px;border-radius:999px;background:#3a2a13;
     color:#f4c98a;border:1px solid #6b4a1f;vertical-align:middle;margin-left:6px}
@@ -310,9 +319,8 @@
 
     <div class="section-title">
       <h2>Free practice</h2>
+      <span>Jump straight into any level, outside the course</span>
     </div>
-    <details class="free">
-      <summary>Jump straight into any level, outside the course</summary>
     <div class="levels">
       <div class="lvl" data-level="1">
         <h3>🔤 Level 1 — Words</h3>
@@ -345,7 +353,6 @@
         <span class="tag" id="tag6">your own text · needs a Gemini key</span>
       </div>
     </div>
-    </details>
     <div id="voiceWarn" class="warn">⚠️ Speech support not detected. For best results use Chrome, Edge or Safari.</div>
     <div class="updbar">
       <span id="updVer">Écoute</span>
