@@ -7,13 +7,16 @@
 import { S } from './state.js';
 import { TRANS } from './data.js';
 import { shuffle, escapeHtml } from './util.js';
+import { speak } from './audio.js';
 import { geminiKey } from './gemini.js';
 import {
-  LESSONS, CHAPTERS, speakItemsFor,
-  PASS_MARK, SPEAK_PASS, SPEAK_STEP_LEN,
+  LESSONS, CHAPTERS, FOUNDATIONS, speakItemsFor,
+  PASS_MARK, SPEAK_PASS, SPEAK_STEP_LEN, FOUND_SPEAK_LEN,
   P, saveProgress, lp, chapterRec, stepPassed, lessonDone, lessonMastered, chapterDone,
   nextStep, doneCount, currentIdx, weakestIdx, bumpStreak, buildLessonDeck,
   liveStreak, chapterUnlocked,
+  fRec, foundationLearned, foundationMastered, foundationsAllLearned,
+  firstOpenFoundation, masteredFoundationCount,
 } from './course.js';
 import { show, render } from './quiz.js';
 import { renderSpeak, showKeyPanel } from './speak.js';
@@ -23,6 +26,7 @@ const STEP_NAME = {1:'👂 Words', 2:'👂 In context', 3:'🎤 Speak it'};
 
 // step 1/2 are listening rounds; step 3 hands off to the mic + Gemini flow
 function startLesson(i, step){
+  if(!foundationsAllLearned()) return;                            // the sounds are gated behind the Foundations
   if(i < 0 || i >= LESSONS.length || i > currentIdx()) return;   // out of range or still locked
   const L = LESSONS[i];
   step = step || nextStep(L) || 1;
@@ -61,13 +65,91 @@ function startChapter(c){
   beginCourseSpeakDeck();
 }
 
+/* ---- the Foundations: a 📖 Learn screen, then a 🎤 Say-it drill ----
+
+   The 📖 step is the theory: read it, hear the examples, and confirm — that
+   confirmation (learnFoundation) is what unlocks the next node, and it needs no
+   Gemini key, so the course can never dead-end. The 🎤 step reuses the whole
+   mic + grader flow through S.courseCtx, exactly like a sound lesson's step 3. */
+function startFoundation(i){
+  if(i < 0 || i >= FOUNDATIONS.length) return;
+  if(i > firstOpenFoundation() && !foundationLearned(FOUNDATIONS[i])) return;   // still locked
+  S.mode = 'lesson'; S.level = 0; S.courseCtx = null;
+  renderLearn(i);
+  show('learn');
+}
+
+// Build the theory screen for foundation i. body strings carry the author's own
+// <b> emphasis, so they're injected as HTML; the French/IPA/gloss are escaped.
+function renderLearn(i){
+  const f = FOUNDATIONS[i];
+  document.getElementById('learnLabel').textContent = `${f.icon} ${f.title}`;
+  document.getElementById('learnGoal').textContent = f.goal;
+
+  const exBtn = (e, bi, ei)=>
+    `<button class="ex" data-b="${bi}" data-e="${ei}">
+       <span class="ex-fr">${escapeHtml(e.fr)}</span>
+       <span class="ex-ipa">/${escapeHtml(e.ipa)}/</span>
+       ${e.it ? `<span class="ex-it">🇮🇹 ${escapeHtml(e.it)}</span>` : ''}
+       <span class="ex-spk" aria-hidden="true">🔊</span>
+     </button>`;
+
+  document.getElementById('learnBody').innerHTML = f.theory.map((blk, bi)=>
+    `<div class="learn-block">
+       <h3>${escapeHtml(blk.h)}</h3>
+       <p>${blk.body}</p>
+       ${blk.ex && blk.ex.length ? `<div class="ex-grid">${blk.ex.map((e, ei)=> exBtn(e, bi, ei)).join('')}</div>` : ''}
+     </div>`).join('');
+
+  // each example says itself when tapped
+  document.querySelectorAll('#learnBody .ex').forEach(btn=>{
+    btn.onclick = ()=>{
+      const e = f.theory[+btn.dataset.b].ex[+btn.dataset.e];
+      speak(e.fr, false);
+    };
+  });
+
+  const speakBtn = document.getElementById('learnSpeak');
+  const learned = foundationLearned(f);
+  speakBtn.textContent = learned ? '🎤 Practise saying it →' : '🎤 Got it — say it out loud →';
+  speakBtn.onclick = ()=> learnFoundation(i);
+}
+
+// Confirming the theory grants the 📖 step (once), then hands off to the drills.
+function learnFoundation(i){
+  const f = FOUNDATIONS[i];
+  const rec = fRec(f.id);
+  const first = !rec.learned;
+  rec.learned = true;
+  if(first){ P.gelato += 30; bumpStreak(); }
+  saveProgress();
+  renderCourse();
+  startFoundationSpeak(i);
+}
+
+// The 🎤 Say-it step: the same recorder + Gemini grader, on this foundation's
+// drills. Like a sound lesson's mic step, it's optional and never gates.
+function startFoundationSpeak(i){
+  const f = FOUNDATIONS[i];
+  S.mode = 'lesson'; S.level = 4; S.lessonStep = 0;
+  S.courseCtx = { type:'foundation', f:i };
+  S.speakMode = f.drills.mode;                       // 'words' (the alphabet) or 'sentences'
+  document.getElementById('plabel').textContent = `${f.icon} ${f.title} — 🎤 Say it`;
+  show('pronounce');
+  if(!geminiKey()){ showKeyPanel(); return; }
+  beginCourseSpeakDeck();
+}
+
 function beginCourseSpeakDeck(){
   document.getElementById('keyPanel').style.display = 'none';
   document.getElementById('sentencePanel').style.display = 'none';
   document.getElementById('speakPanel').style.display = '';
-  S.speakDeck = (S.courseCtx.type === 'chapter')
-    ? CHAPTERS[S.courseCtx.chapter].items.slice()
-    : shuffle(speakItemsFor(LESSONS[S.courseCtx.lesson])).slice(0, SPEAK_STEP_LEN);
+  if(S.courseCtx.type === 'chapter')
+    S.speakDeck = CHAPTERS[S.courseCtx.chapter].items.slice();
+  else if(S.courseCtx.type === 'foundation')
+    S.speakDeck = shuffle(FOUNDATIONS[S.courseCtx.f].drills.items.slice()).slice(0, FOUND_SPEAK_LEN);
+  else
+    S.speakDeck = shuffle(speakItemsFor(LESSONS[S.courseCtx.lesson])).slice(0, SPEAK_STEP_LEN);
   S.sidx = 0; S.spassed = 0; S.sresults = []; S.passedSet = new Set();
   renderSpeak();
 }
@@ -232,6 +314,52 @@ function finishCourseSpeak(){
     return;
   }
 
+  if(S.courseCtx.type === 'foundation'){
+    const fi = S.courseCtx.f;
+    const f = FOUNDATIONS[fi];
+    const rec = fRec(f.id);
+    const first = passed && rec.sp < SPEAK_PASS*100;
+    if(passed) rec.sp = Math.max(rec.sp, Math.round(pct*100));
+    const gelato = S.spassed*15 + (passed ? 60 : 0);
+    P.gelato += gelato;
+    const grew = bumpStreak();
+    saveProgress();
+
+    document.getElementById('finalScore').textContent = `${S.spassed} / ${S.speakDeck.length}`;
+    document.getElementById('resultMsg').textContent = passed
+      ? `${f.title} — you can say it now, not just read it.`
+      : `You need ${Math.round(SPEAK_PASS*100)}% to master this. Tap 🔊 Hear it, then copy it closely. (The rule is already learned — this only adds mastery.)`;
+    document.getElementById('resultRemy').style.display = '';
+    document.getElementById('resultRemyLine').innerHTML = passed
+      ? (first ? `<b>★ Bien dit !</b> ${escapeHtml(f.title)} — mastered. Your mouth agrees with the rule.`
+               : `<b>Toujours net.</b> ${escapeHtml(f.title)} still solid.`)
+      : `<b>Presque !</b> Relis les exemples, écoute, puis répète.`;
+    document.getElementById('resultStats').innerHTML =
+      `<span class="stat">+${gelato} 🍨</span>` +
+      `<span class="stat${liveStreak()?' hot':''}">🔥 ${liveStreak()} day${liveStreak()===1?'':'s'}${grew?' · +1':''}</span>` +
+      `<span class="stat">📖 ${masteredFoundationCount()} / ${FOUNDATIONS.length}</span>` +
+      (foundationMastered(f) ? `<span class="stat gold">★ mastered</span>` : '');
+
+    const retry = document.getElementById('retryBtn');
+    retry.className = passed ? 'btn ghost' : 'btn';
+    retry.textContent = passed ? 'Repeat drill' : 'Try again';
+    retry.onclick = ()=> startFoundationSpeak(fi);
+
+    // The 📖 step already unlocked what's next, so always offer the way forward.
+    const next = document.getElementById('nextLessonBtn');
+    next.style.display = '';
+    if(fi + 1 < FOUNDATIONS.length){
+      next.textContent = `Next → ${FOUNDATIONS[fi+1].icon} ${FOUNDATIONS[fi+1].title}`;
+      next.onclick = ()=> startFoundation(fi + 1);
+    } else {
+      next.textContent = `🎓 On to the sounds → ${LESSONS[0].title}`;
+      next.onclick = ()=> startLesson(0, 1);
+    }
+
+    renderCourse();
+    return;
+  }
+
   // 🎤 step of a sound lesson
   const L = LESSONS[S.courseCtx.lesson];
   settleStep({
@@ -249,5 +377,6 @@ function finishCourseSpeak(){
 
 export {
   STEP_NAME, startLesson, startSpeakStep, startChapter, beginCourseSpeakDeck,
+  startFoundation, renderLearn, learnFoundation, startFoundationSpeak,
   recordAnswer, settleStep, finishLesson, nextStepAfter, finishCourseSpeak,
 };

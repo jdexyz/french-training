@@ -165,7 +165,7 @@ function quitToMenu(){
   renderCourse(); show('menu');
 }
 function show(id){
-  ['menu','quiz','pronounce','result'].forEach(s=> document.getElementById(s).style.display = (s===id?'':'none'));
+  ['menu','quiz','pronounce','result','learn'].forEach(s=> document.getElementById(s).style.display = (s===id?'':'none'));
   window.scrollTo(0,0);
 }
 

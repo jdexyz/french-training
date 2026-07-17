@@ -15,8 +15,33 @@ that deliver the reminders.
 
 ## Rémy's course
 
-The course is the main way in, and every level feeds it. It turns the exercise
-pools into **30 lessons, one per sound contrast**, ordered easiest-first:
+The course is the main way in, and every level feeds it. It opens with the
+**Foundations** — the alphabet and the spelling-to-sound rules — and then runs
+**30 sound lessons**, one per contrast, ordered easiest-first.
+
+### The Foundations come first
+
+Before the ear-training starts, **17 short reading lessons** teach how French
+spelling maps to sound, and gate the sounds behind them — you learn to read the
+letters before you drill the vowels. They are a different shape from a contrast
+lesson: theory, not a minimal pair.
+
+- **🔤 The alphabet** — name all 26 letters the French way.
+- **The rules** — accents & the cédille, `u /y/` vs `ou /u/`, the vowel teams
+  (`au/eau`, `oi`, `eu`, `ai`), the soft/hard `c` and `g`, `s` = `/z/` between
+  vowels, the digraphs (`ch gn ph th qu`), the three nasals (`/ɔ̃/ /ɑ̃/ /ɛ̃/`)
+  **and when a nasal spelling is *not* nasal** (*incroyable* /ɛ̃/ vs *inégal*
+  /in/), the silent final consonants, the silent verb endings, `-ille`, the
+  silent `h` with élision & liaison, and the throat `R` with the mute `e`.
+
+Each Foundation runs in two steps: **📖 Learn** — read the rule, tap 🔊 on any
+example to hear it — and **🎤 Say it** — say the examples yourself, graded by
+Gemini. Learning gates the next node and needs no key; the mic step is optional
+and takes the rule to **mastery** (★), exactly like a sound lesson's 🎤 step. An
+existing learner already into the sounds is grandfathered past them, not
+re-locked.
+
+The 30 sound lessons then follow, ordered easiest-first:
 
 1. **Oral vowels** — *chat / chaud*, *tout / tu*, *peu / peau*, the open-vs-closed
    *saute / sotte*, and the schwa that separates *le* from *les*.
@@ -208,10 +233,12 @@ npm run test:all
 
 `test/course.test.mjs` runs the app's *real* script under a DOM stub and drives
 the actual `buildLessonDeck()`, `finishLesson()`, `currentIdx()` — so it breaks
-when the app breaks, not when a reimplementation drifts. `test/browser.test.mjs`
-plays a lesson end to end (listening steps, the mic step with Gemini stubbed, a
-law chapter), checks the free levels are untouched, and checks the
-service-worker update path. Together, 166 assertions.
+when the app breaks, not when a reimplementation drifts — including that the
+Foundations gate the sounds and grandfather an existing learner. Together with
+the reminder suite, 184 assertions. `test/browser.test.mjs` plays it end to end
+in Chromium: a Foundation (📖 Learn → 🎤 Say it), then a sound lesson's three
+steps (the mic step with Gemini stubbed) and a law chapter, checks the free
+levels are untouched, and checks the service-worker update path.
 
 ## Files
 
@@ -221,7 +248,8 @@ browser loads the modules directly; nothing is compiled, bundled or transpiled.
 
 | File | What |
 | --- | --- |
-| `js/data.js` | **All the teaching content.** Add a minimal pair here and the course picks it up on its own: the `focus` field (`"/u/ vs /y/"`) *is* the lesson id. No app code to touch. |
+| `js/data.js` | **All the sound-contrast content.** Add a minimal pair here and the course picks it up on its own: the `focus` field (`"/u/ vs /y/"`) *is* the lesson id. No app code to touch. |
+| `js/foundations.js` | **The Foundations content** — the alphabet and the spelling-to-sound rules, as theory + 🔊 examples + speaking drills. Add one here and the course prepends it to the path and gates the sounds behind it. |
 | `js/state.js` | The state a running round lives in — one object, on purpose (see below). |
 | `js/course.js` | The course model *and* progress: lessons, steps, gating, spaced review, streak. Derived from the data, not hand-written. |
 | `js/quiz.js` | The listening rounds (free levels 1–3 and the course's 👂 steps). |

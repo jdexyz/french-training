@@ -16,15 +16,17 @@ const lesson = await import('../js/lesson.js');
 const { S } = await import('../js/state.js');
 
 const {
-  LESSONS, CHAPTERS, CHAPTER_AFTER, PATH,
-  SESSION_LEN, SPEAK_STEP_LEN,
+  LESSONS, CHAPTERS, CHAPTER_AFTER, PATH, FOUNDATIONS,
+  SESSION_LEN, SPEAK_STEP_LEN, FOUND_SPEAK_LEN,
   speakItemsFor, buildLessonDeck, poolTier, tierFor,
   defaultProgress, loadProgress, saveProgress, setProgress,
   lp, chapterRec, stepPassed, lessonDone, lessonMastered, chapterDone, nextStep,
   doneCount, currentIdx, chapterUnlocked, liveStreak, bumpStreak, todayStr, yesterdayStr,
+  fRec, foundationLearned, foundationMastered, foundationsAllLearned, foundationUnlocked, firstOpenFoundation,
 } = { ...course, ...(await import('../js/util.js')) };
 const { LAW_SENTENCES, OFFICE_SENTENCES } = await import('../js/data.js');
-const { startLesson, startChapter, finishLesson, finishCourseSpeak, recordAnswer } = lesson;
+const { startLesson, startChapter, finishLesson, finishCourseSpeak, recordAnswer,
+  startFoundation, learnFoundation, startFoundationSpeak } = lesson;
 
 const t = suite('course engine');
 const P = () => course.P;                       // live binding: re-read after a reset
@@ -61,7 +63,8 @@ const gaps = CHAPTER_AFTER.map((a, i) => a - (CHAPTER_AFTER[i - 1] ?? 0));
 t.ok(Math.max(...gaps) <= 2, `never more than 2 lessons without a spoken chapter (max gap ${Math.max(...gaps)})`);
 t.ok(CHAPTER_AFTER[0] <= 2, `the first chapter opens after ${CHAPTER_AFTER[0]} sounds`);
 t.note(`${CHAPTERS.filter((c) => c.kind === 'law').length} law + ${CHAPTERS.filter((c) => c.kind === 'office').length} office chapters over ${LESSONS.length} sounds`);
-t.note('path: ' + PATH.map((x) => (x.type === 'chapter' ? (CHAPTERS[x.c].kind === 'law' ? '[⚖]' : '[💼]') : x.i + 1)).join(' '));
+t.note('path: ' + PATH.map((x) =>
+  x.type === 'foundation' ? '📖' : x.type === 'chapter' ? (CHAPTERS[x.c].kind === 'law' ? '[⚖]' : '[💼]') : x.i + 1).join(' '));
 
 t.section('every exercise lands in some step');
 t.ok(LESSONS.every((L) => L.stepA && L.stepA.length), 'every lesson has a step-1 pool');
@@ -238,11 +241,67 @@ t.ok(!lp(LESSONS[0].key).sp, 'the mic step is simply not done yet');
 
 t.section('locked things stay locked');
 setProgress(defaultProgress());
+FOUNDATIONS.forEach((f) => { fRec(f.id).learned = true; });    // clear the foundation gate first
 S.mode = 'free';
 startLesson(6, 1);
 t.eq(S.mode, 'free', 'startLesson on a locked lesson is a no-op');
 S.courseCtx = null;
 startChapter(CHAPTERS.length - 1);
 t.ok(!S.courseCtx, 'startChapter on a locked chapter is a no-op');
+
+t.section('the Foundations come first and gate the sounds');
+fresh();
+t.eq(PATH.filter((x) => x.type === 'foundation').length, FOUNDATIONS.length, 'the path holds every foundation');
+t.eq(PATH[0].type, 'foundation', 'the path opens on a foundation');
+const firstSound = PATH.findIndex((x) => x.type === 'sound');
+const lastFound = PATH.map((x) => x.type).lastIndexOf('foundation');
+t.ok(lastFound < firstSound, 'every foundation sits before the first sound');
+t.ok(!foundationsAllLearned(), 'nothing is learned at the start');
+t.ok(foundationUnlocked(0) && !foundationUnlocked(1), 'only the first foundation is open');
+t.eq(firstOpenFoundation(), 0, 'you begin on the alphabet');
+t.note(FOUNDATIONS.length + ' foundations: ' + FOUNDATIONS.map((f) => f.title).join(', '));
+
+t.section('a sound cannot start until every foundation is learned');
+S.mode = 'free';
+startLesson(0, 1);
+t.eq(S.mode, 'free', 'startLesson is a no-op while the foundations are unlearned');
+
+t.section('learning a foundation is free, unlocks the next, and pays gelato');
+const gF = P().gelato;
+learnFoundation(0);
+S.courseCtx = null;                             // learnFoundation opens the speak step; drop it
+t.ok(foundationLearned(FOUNDATIONS[0]), 'the alphabet is learned');
+t.ok(!foundationMastered(FOUNDATIONS[0]), 'but not mastered — that needs the mic');
+t.ok(foundationUnlocked(1), 'the next foundation opened');
+t.ok(P().gelato > gF, `learning pays gelato: +${P().gelato - gF}`);
+t.eq(firstOpenFoundation(), 1, 'the path moved on');
+
+t.section('the 🎤 Say-it step masters a foundation, and never gates');
+const gS = P().gelato;
+S.courseCtx = { type: 'foundation', f: 0 };
+S.speakDeck = FOUNDATIONS[0].drills.items.slice(0, FOUND_SPEAK_LEN);
+S.spassed = S.speakDeck.length; S.sresults = []; S.passedSet = new Set();
+finishCourseSpeak();
+S.courseCtx = null;
+t.ok(foundationMastered(FOUNDATIONS[0]), 'saying it aloud masters the foundation');
+t.ok(P().gelato > gS, `the mic step pays gelato: +${P().gelato - gS}`);
+t.ok(foundationUnlocked(1), 'and the gate never depended on it');
+
+t.section('learning them all unlocks the sounds');
+fresh();
+FOUNDATIONS.forEach((f) => { fRec(f.id).learned = true; });
+t.ok(foundationsAllLearned(), 'every foundation learned');
+S.mode = 'free';
+startLesson(0, 1);
+t.eq(S.mode, 'lesson', 'now lesson 1 starts');
+S.mode = 'free'; S.courseCtx = null;
+
+t.section('an existing sound-learner is grandfathered past the new foundations');
+localStorage.setItem('ecoute_progress_v1', JSON.stringify({
+  v: 3, gelato: 100, lessons: { [LESSONS[0].key]: { s1: 100, s2: 100, strength: 2 } },
+}));
+setProgress(loadProgress());
+t.ok(foundationsAllLearned(), 'a learner already into the sounds is not re-locked behind the foundations');
+t.ok(!('foundations' in JSON.parse(localStorage.getItem('ecoute_progress_v1'))), 'the stored record itself was untouched until next save');
 
 t.done();

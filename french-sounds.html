@@ -220,6 +220,28 @@
   .steprow .snt span{display:block;font-size:.76rem;color:var(--muted);margin-top:1px}
   .stat.gold{color:#f0c877;border-color:#d9a441}
 
+  /* ===== Foundations — the path node and the Learn (theory) screen ===== */
+  .node.found .dot{background:rgba(124,140,255,.12);border-color:var(--accent)}
+  .node.found.done .dot{background:rgba(61,220,132,.15);border-color:var(--good);color:var(--good)}
+  .node.found.gold .dot{background:rgba(217,164,65,.18);border-color:#d9a441;color:#f0c877}
+  .learn-goal{color:var(--accent2);font-size:1rem;margin:2px 0 16px;line-height:1.45}
+  .learn-body{display:flex;flex-direction:column;gap:14px}
+  .learn-block{background:var(--card2);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+  .learn-block h3{margin:0 0 8px;font-size:1.02rem;color:var(--text)}
+  .learn-block p{margin:0;color:var(--muted);font-size:.95rem;line-height:1.6}
+  .learn-block p b{color:var(--accent2);font-weight:600}
+  .ex-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:14px}
+  .ex{display:flex;flex-direction:column;align-items:flex-start;gap:2px;position:relative;
+    background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;
+    text-align:left;color:var(--text);font:inherit;cursor:pointer;transition:.12s}
+  .ex:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .ex:active{transform:scale(.98)}
+  .ex-fr{font-size:1.15rem;font-weight:600}
+  .ex-ipa{color:var(--accent2);font-size:.9rem}
+  .ex-it{color:var(--muted);font-style:italic;font-size:.82rem}
+  .ex-spk{position:absolute;top:8px;right:10px;font-size:1rem;opacity:.55}
+  .ex:hover .ex-spk{opacity:1}
+
   /* A real break between Rémy's course and the free levels below it — the course
      is the app, the levels are the workshop behind it. */
   .section-title{margin:38px 0 12px;padding-top:26px;border-top:2px solid var(--line);text-align:center}
@@ -448,6 +470,20 @@
         </div>
       </div>
       <div class="keylink"><a href="#" id="changeKey">⚙︎ Change Gemini key</a></div>
+    </div>
+  </section>
+
+  <!-- FOUNDATIONS — LEARN (the theory: alphabet & spelling-to-sound rules) -->
+  <section id="learn" class="card" style="display:none">
+    <div class="topbar">
+      <span id="learnLabel"></span>
+      <span>📖 Learn</span>
+    </div>
+    <p class="learn-goal" id="learnGoal"></p>
+    <div id="learnBody" class="learn-body"></div>
+    <div class="footer-row">
+      <button class="btn ghost" data-to-menu>← Menu</button>
+      <button id="learnSpeak" class="btn">🎤 Got it — say it out loud →</button>
     </div>
   </section>
 

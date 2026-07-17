@@ -80,11 +80,43 @@ async function playSpeak() {
   throw new Error('speak round never ended');
 }
 
+// the sound lessons are the nodes that are neither a foundation nor a chapter
+const soundNodes = page.locator('.node:not(.found):not(.law)');
+
 t.section('the menu');
-t.eq(await page.locator('.node').count(), 50, '30 sounds + 20 spoken chapters in the path');
-t.eq(await page.locator('.node:not([disabled])').count(), 1, 'only lesson 1 is open at the start');
-t.eq(await page.locator('.node').first().locator('.pip').count(), 3, 'lesson 1 shows three steps');
-t.ok((await page.locator('#continueBtn').innerText()).includes('👂 Words'), 'Continue points at step 1');
+t.eq(await page.locator('.node').count(), 67, '17 foundations + 30 sounds + 20 spoken chapters in the path');
+t.eq(await page.locator('.node:not([disabled])').count(), 1, 'only the first foundation is open at the start');
+t.ok((await page.locator('.node').first().getAttribute('class')).includes('found'), 'the path opens on a foundation');
+t.eq(await page.locator('.node').first().locator('.pip').count(), 2, 'a foundation shows two steps: 📖 and 🎤');
+t.ok((await page.locator('#continueBtn').innerText()).includes('alphabet'), 'Continue points at the alphabet');
+
+t.section('a foundation · 📖 Learn, then 🎤 Say it');
+await page.locator('#continueBtn').click();
+await page.waitForSelector('#learn:visible');
+t.ok((await page.locator('#learnLabel').innerText()).length > 0, 'the Learn screen shows the rule');
+t.ok(await page.locator('#learnBody .ex').count() > 0, 'with tappable examples');
+await page.locator('#learnSpeak').click();
+await page.waitForSelector('#pronounce:visible');
+t.ok(await page.evaluate(() => __ecoute.foundationLearned(__ecoute.FOUNDATIONS[0])), 'confirming the theory learns it, no key needed');
+t.ok(await page.evaluate(() => __ecoute.foundationsAllLearned() === false), 'the other foundations are still to do');
+await playSpeak();
+await page.waitForSelector('#result:visible');
+t.ok((await page.locator('#resultStats').innerText()).includes('mastered'), 'saying it aloud masters the foundation');
+await page.locator('#result .btn.ghost').first().click();
+await page.waitForSelector('#menu:visible');
+
+t.section('the sounds stay locked until every foundation is learned');
+t.ok(await page.evaluate(() => __ecoute.currentIdx() === 0 && __ecoute.S.mode === 'free'), 'no sound has been touched');
+t.ok(await soundNodes.first().isDisabled(), 'sound lesson 1 is still locked behind the foundations');
+// fast-forward the remaining foundations rather than reading 17 theory screens
+await page.evaluate(() => {
+  const { FOUNDATIONS, fRec, saveProgress, renderCourse } = __ecoute;
+  FOUNDATIONS.forEach((f) => { fRec(f.id).learned = true; });
+  saveProgress(); renderCourse();
+});
+t.ok(await page.evaluate(() => __ecoute.foundationsAllLearned()), 'all foundations learned');
+t.ok(!(await soundNodes.first().isDisabled()), 'now sound lesson 1 is open');
+t.ok((await page.locator('#continueBtn').innerText()).includes('👂 Words'), 'and Continue points at sound lesson 1, step 1');
 
 t.section('lesson 1 · step 1 (listen to words)');
 await page.locator('#continueBtn').click();
@@ -117,8 +149,8 @@ t.ok((await page.locator('#resultStats').innerText()).includes('mastered'), 'the
 
 await page.locator('#result .btn.ghost').first().click();
 await page.waitForSelector('#menu:visible');
-t.ok((await page.locator('.node').first().getAttribute('class')).includes('gold'), 'lesson 1 is gold on the path');
-t.eq(await page.locator('.node').first().locator('.pip.on').count(), 3, 'all three pips lit');
+t.ok((await soundNodes.first().getAttribute('class')).includes('gold'), 'sound lesson 1 is gold on the path');
+t.eq(await soundNodes.first().locator('.pip.on').count(), 3, 'all three pips lit');
 
 t.section('spoken chapters unlock alongside, and never gate a sound');
 const chapter = page.locator('.node.law').first();

@@ -8,6 +8,7 @@
    and "have you cleared lesson 6" are the same question asked twice. */
 
 import { LEVEL1, LEVEL2, LEVEL3, TRANS, LAW_SENTENCES, OFFICE_SENTENCES } from './data.js';
+import { FOUNDATIONS } from './foundations.js';
 import { shuffle, dayStr, todayStr, yesterdayStr } from './util.js';
 
 // Called when a round lands, so the reminder backend can skip tonight's nudge.
@@ -184,7 +185,9 @@ const CHAPTER_AFTER = CHAPTERS.map((_, c)=>
 // The path the learner actually sees: the sounds, with the spoken chapters
 // slotted in between them.
 const PATH = (()=>{
-  const nodes = [];
+  // The Foundations come first and gate the sounds: you learn to read the
+  // letters and the spelling rules before you drill the vowel contrasts.
+  const nodes = FOUNDATIONS.map((_, f)=> ({ type:'foundation', f }));
   LESSONS.forEach((L, i)=>{
     nodes.push({ type:'sound', i });
     CHAPTER_AFTER.forEach((after, c)=>{ if(after === i+1) nodes.push({ type:'chapter', c }); });
@@ -196,13 +199,14 @@ const SESSION_LEN = 12;
 const PASS_MARK = 0.8;          // listening steps
 const SPEAK_PASS = 0.7;         // spoken steps — a mild accent shouldn't fail you
 const SPEAK_STEP_LEN = 6;       // words in a 🎤 step
+const FOUND_SPEAK_LEN = 8;      // drill items in a foundation's 🎤 Say-it step
 
 /* ---- stored progress ---- */
 const PKEY = 'ecoute_progress_v1';
 // A factory, not a shared constant: `lessons` must be a fresh object every time,
 // or lp() would write the learner's records into the defaults themselves.
 function defaultProgress(){
-  return { v:3, gelato:0, streak:0, bestStreak:0, lastDay:null, lessons:{}, chapters:{}, hour:19, push:false };
+  return { v:4, gelato:0, streak:0, bestStreak:0, lastDay:null, lessons:{}, chapters:{}, foundations:{}, hour:19, push:false };
 }
 export let P = loadProgress();
 
@@ -212,6 +216,14 @@ function loadProgress(){
   const p = Object.assign(defaultProgress(), raw);
   p.lessons = Object.assign({}, raw.lessons || {});
   p.chapters = Object.assign({}, raw.chapters || {});
+  p.foundations = Object.assign({}, raw.foundations || {});
+  // Migration: the Foundations were added after the sounds. A learner who was
+  // already partway through the sounds should NOT find the whole path suddenly
+  // re-locked behind them — grandfather the Foundations in as already learned.
+  if(raw.foundations === undefined){
+    const hadProgress = raw.lessons && Object.values(raw.lessons).some(r=> r && (r.done || r.s1 || r.s2 || r.sp || r.best));
+    if(hadProgress) FOUNDATIONS.forEach(f=>{ p.foundations[f.id] = { learned:true, sp:0 }; });
+  }
   return p;
 }
 // Reset and the tests need to swap the whole object; an imported binding can't
@@ -231,6 +243,24 @@ function lp(key){
   return r;
 }
 function chapterRec(c){ return P.chapters[c] || (P.chapters[c] = {best:0}); }
+
+/* ---- the Foundations: the alphabet and the spelling-to-sound rules ----
+   A foundation has two steps: 📖 Learn (reading the theory — free, and what
+   gates the next node) and 🎤 Say it (the drills — optional, needs a Gemini
+   key, and what takes it to mastery). `learned` is the gate; `sp` is the best
+   spoken score. They unlock in order and, together, gate the first sound. */
+function fRec(id){ return P.foundations[id] || (P.foundations[id] = { learned:false, sp:0 }); }
+function foundationLearned(f){ return !!fRec(f.id).learned; }
+function foundationMastered(f){ return foundationLearned(f) && fRec(f.id).sp >= SPEAK_PASS*100; }
+function foundationsAllLearned(){ return FOUNDATIONS.every(foundationLearned); }
+function foundationUnlocked(i){ return i === 0 || foundationLearned(FOUNDATIONS[i-1]); }
+// the first foundation still to be learned (clamped, so it's always a real index)
+function firstOpenFoundation(){
+  const i = FOUNDATIONS.findIndex(f=> !foundationLearned(f));
+  return i < 0 ? FOUNDATIONS.length - 1 : i;
+}
+function learnedFoundationCount(){ return FOUNDATIONS.filter(foundationLearned).length; }
+function masteredFoundationCount(){ return FOUNDATIONS.filter(foundationMastered).length; }
 
 function stepPassed(L, step){
   const r = lp(L.key);
@@ -350,11 +380,13 @@ function buildLessonDeck(i, step){
 
 export {
   contrastKey, POOLS, COURSE_ORDER, LESSONS, PATH, CHAPTERS, CHAPTER_AFTER, ROMAN,
-  IPA_MAP, L1_WORDS, speakItemsFor,
-  SESSION_LEN, PASS_MARK, SPEAK_PASS, SPEAK_STEP_LEN,
+  FOUNDATIONS, IPA_MAP, L1_WORDS, speakItemsFor,
+  SESSION_LEN, PASS_MARK, SPEAK_PASS, SPEAK_STEP_LEN, FOUND_SPEAK_LEN,
   defaultProgress, loadProgress, saveProgress, setProgress, lp, chapterRec,
   stepPassed, lessonDone, lessonMastered, chapterDone, nextStep,
   doneCount, masteredCount, currentIdx, chapterUnlocked, weakestIdx,
   liveStreak, bumpStreak,
+  fRec, foundationLearned, foundationMastered, foundationsAllLearned,
+  foundationUnlocked, firstOpenFoundation, learnedFoundationCount, masteredFoundationCount,
   poolTier, tierFor, drawFrom, buildLessonDeck,
 };
