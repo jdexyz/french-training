@@ -2,6 +2,7 @@
 
 import { S } from './state.js';
 import { escapeHtml, todayStr } from './util.js';
+import { L as tr, lang, setLang } from './i18n.js';   // aliased: `L` is the lesson variable everywhere here
 import { geminiKey } from './gemini.js';
 import {
   LESSONS, PATH, CHAPTERS, CHAPTER_AFTER, FOUNDATIONS,
@@ -15,25 +16,36 @@ import { STEP_NAME, startLesson, startChapter, startFoundation, startFoundationS
 
 /* ---- the menu: Rémy, the stats, the path ---- */
 function remyLine(allDone, cur, streak){
+  const it = lang() === 'it';
   if(!foundationsAllLearned()){
-    const f = FOUNDATIONS[firstOpenFoundation()];
+    const f = escapeHtml(FOUNDATIONS[firstOpenFoundation()].title);
     if(!P.lastDay)
-      return `Salut ! Je suis <b>Rémy</b>. On commence par les bases : <b>${escapeHtml(f.title)}</b>. D'abord lire, ensuite les sons.`;
+      return it ? `Ciao ! Sono <b>Rémy</b>. Partiamo dalle basi : <b>${f}</b>. Prima leggere, poi i suoni.`
+                : `Salut ! Je suis <b>Rémy</b>. On commence par les bases : <b>${f}</b>. D'abord lire, ensuite les sons.`;
     if(P.lastDay === todayStr())
-      return `<b>Déjà fait aujourd'hui</b> — chapeau. Un peu plus ? <b>${escapeHtml(f.title)}</b> t'attend.`;
+      return it ? `<b>Già fatto oggi</b> — bravo. Ancora un po' ? <b>${f}</b> ti aspetta.`
+                : `<b>Déjà fait aujourd'hui</b> — chapeau. Un peu plus ? <b>${f}</b> t'attend.`;
     if(streak > 0)
-      return `Ta <b>série de ${streak} jour${streak===1?'':'s'}</b> continue. On pose les bases : <b>${escapeHtml(f.title)}</b>.`;
-    return `On pose d'abord les fondations : <b>${escapeHtml(f.title)}</b>. Lis la règle, puis dis-la à voix haute.`;
+      return it ? `La tua <b>serie di ${streak} giorn${streak===1?'o':'i'}</b> continua. Mettiamo le basi : <b>${f}</b>.`
+                : `Ta <b>série de ${streak} jour${streak===1?'':'s'}</b> continue. On pose les bases : <b>${f}</b>.`;
+    return it ? `Prima posiamo le fondamenta : <b>${f}</b>. Leggi la regola, poi dilla ad alta voce.`
+              : `On pose d'abord les fondations : <b>${f}</b>. Lis la règle, puis dis-la à voix haute.`;
   }
+  const curTitle = escapeHtml(LESSONS[cur].title);
   if(allDone)
-    return `<b>Tout le programme !</b> Every sound in the course is yours. Now we keep them sharp — one review a day.`;
+    return it ? `<b>Tutto il programma !</b> Ogni suono del corso è tuo. Ora li teniamo affilati — un ripasso al giorno.`
+              : `<b>Tout le programme !</b> Every sound in the course is yours. Now we keep them sharp — one review a day.`;
   if(!P.lastDay)
-    return `Salut ! Je suis <b>Rémy</b>. On commence par le plus simple : <b>${escapeHtml(LESSONS[0].title)}</b>. Une leçon, et c'est tout.`;
+    return it ? `Ciao ! Sono <b>Rémy</b>. Cominciamo dal più semplice : <b>${escapeHtml(LESSONS[0].title)}</b>. Una lezione, e basta.`
+              : `Salut ! Je suis <b>Rémy</b>. On commence par le plus simple : <b>${escapeHtml(LESSONS[0].title)}</b>. Une leçon, et c'est tout.`;
   if(P.lastDay === todayStr())
-    return `<b>Déjà fait aujourd'hui</b> — chapeau. Envie d'un tour de plus ?`;
+    return it ? `<b>Già fatto oggi</b> — bravo. Voglia di un altro giro ?`
+              : `<b>Déjà fait aujourd'hui</b> — chapeau. Envie d'un tour de plus ?`;
   if(streak > 0)
-    return `Your <b>${streak}-day streak</b> is waiting. Leçon ${cur+1} : <b>${escapeHtml(LESSONS[cur].title)}</b>.`;
-  return `Ça fait un moment ! On reprend doucement — leçon ${cur+1}, <b>${escapeHtml(LESSONS[cur].title)}</b>.`;
+    return it ? `La tua <b>serie di ${streak} giorn${streak===1?'o':'i'}</b> ti aspetta. Lezione ${cur+1} : <b>${curTitle}</b>.`
+              : `Your <b>${streak}-day streak</b> is waiting. Leçon ${cur+1} : <b>${curTitle}</b>.`;
+  return it ? `È da un po' ! Riprendiamo con calma — lezione ${cur+1}, <b>${curTitle}</b>.`
+            : `Ça fait un moment ! On reprend doucement — leçon ${cur+1}, <b>${curTitle}</b>.`;
 }
 
 // which node's step list is expanded in the path
@@ -93,6 +105,7 @@ function renderCourse(){
 
   PATH.forEach((node)=>{
     if(node.type === 'foundation'){
+      const it = lang() === 'it';
       const fi = node.f;
       const f = FOUNDATIONS[fi];
       const rec = fRec(f.id);
@@ -108,7 +121,7 @@ function renderCourse(){
         `<span class="dot">${mastered ? '★' : learned ? '✓' : locked ? '🔒' : f.icon}</span>
          <span class="nt">
            <b>${escapeHtml(f.title)}</b>
-           <span>${escapeHtml(f.goal)}${locked ? ' · locked' : ''}</span>
+           <span>${escapeHtml(tr(f.goal))}${locked ? (it ? ' · bloccato' : ' · locked') : ''}</span>
          </span>
          <span class="pips">
            <i class="pip${learned ? ' on' : ''}">📖</i>
@@ -121,14 +134,19 @@ function renderCourse(){
         const panel = document.createElement('div');
         panel.className = 'steps';
         const needsKey = !geminiKey();
+        const learnNote = learned ? (it ? 'la regola e gli esempi' : 'the rule, and the examples')
+                                  : (it ? 'leggi la regola · sblocca il passo dopo' : 'read the rule · unlocks the next step');
+        const speakNote = mastered ? `${it ? 'meglio' : 'best'} ${rec.sp}%`
+                        : needsKey ? (it ? 'facoltativo · serve una chiave Gemini' : 'optional · needs a Gemini key')
+                                   : (it ? 'facoltativo · +60 🍨' : 'optional · +60 🍨');
         panel.innerHTML =
           `<button class="steprow${learned?' done':''}" data-f="${fi}" data-fstep="learn">
              <span class="sdot">${learned ? '✓' : '📖'}</span>
-             <span class="snt"><b>📖 Learn</b><span>${learned ? 'the rule, and the examples' : 'read the rule · unlocks the next step'}</span></span>
+             <span class="snt"><b>📖 ${it ? 'Impara' : 'Learn'}</b><span>${learnNote}</span></span>
            </button>
            <button class="steprow${mastered?' done':''}" data-f="${fi}" data-fstep="speak">
              <span class="sdot">${mastered ? '✓' : '🎤'}</span>
-             <span class="snt"><b>🎤 Say it</b><span>${mastered ? `best ${rec.sp}%` : needsKey ? 'optional · needs a Gemini key' : 'optional · +60 🍨'}</span></span>
+             <span class="snt"><b>🎤 ${it ? 'Pronunciala' : 'Say it'}</b><span>${speakNote}</span></span>
            </button>`;
         panel.querySelectorAll('.steprow').forEach(r=>{
           r.onclick = ()=> r.dataset.fstep === 'learn' ? startFoundation(+r.dataset.f) : startFoundationSpeak(+r.dataset.f);
@@ -204,4 +222,18 @@ document.getElementById('resetBtn').onclick = (e)=>{
   renderCourse();
 };
 
-export { renderCourse, remyLine, stepRow };
+/* ---- the 🇬🇧 / 🇮🇹 language setting ---- */
+function renderLang(){
+  const sub = document.getElementById('langSub');
+  if(sub) sub.textContent = lang() === 'it'
+    ? 'Le spiegazioni di Rémy e le Fondamenta (le glosse restano in italiano).'
+    : "Rémy's coaching and the Foundations (the Italian glosses stay put).";
+  document.querySelectorAll('#langToggle .seg').forEach(s=>
+    s.classList.toggle('on', s.dataset.lang === lang()));
+}
+document.querySelectorAll('#langToggle .seg').forEach(s=>{
+  s.onclick = ()=>{ setLang(s.dataset.lang); renderLang(); renderCourse(); };
+});
+renderLang();
+
+export { renderCourse, remyLine, stepRow, renderLang };

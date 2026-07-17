@@ -90,6 +90,19 @@ t.ok((await page.locator('.node').first().getAttribute('class')).includes('found
 t.eq(await page.locator('.node').first().locator('.pip').count(), 2, 'a foundation shows two steps: 📖 and 🎤');
 t.ok((await page.locator('#continueBtn').innerText()).includes('alphabet'), 'Continue points at the alphabet');
 
+t.section('the 🌐 language setting switches Rémy and the Foundations');
+t.eq(await page.locator('#langToggle .seg.on').getAttribute('data-lang'), 'en', 'English is the default');
+await page.locator('#langToggle .seg[data-lang="it"]').click();
+t.ok((await page.locator('#remyLine').innerText()).includes('Sono'), 'Rémy now coaches in Italian');
+await page.locator('#continueBtn').click();
+await page.waitForSelector('#learn:visible');
+t.ok((await page.locator('.italian-tip h4').innerText()).includes('orecchio italiano'), 'the Learn screen shows the Italian-ear tip heading in Italian');
+t.ok((await page.locator('#learnBody').innerText()).includes('alfabeto'), 'and the theory renders in Italian');
+await page.locator('#learn [data-to-menu]').click();
+await page.waitForSelector('#menu:visible');
+await page.locator('#langToggle .seg[data-lang="en"]').click();     // back to English for the rest of the run
+t.ok((await page.locator('#remyLine').innerText()).includes('Salut'), 'and back to English coaching');
+
 t.section('a foundation · 📖 Learn, then 🎤 Say it');
 await page.locator('#continueBtn').click();
 await page.waitForSelector('#learn:visible');

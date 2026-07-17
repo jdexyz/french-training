@@ -25,8 +25,9 @@ const {
   fRec, foundationLearned, foundationMastered, foundationsAllLearned, foundationUnlocked, firstOpenFoundation,
 } = { ...course, ...(await import('../js/util.js')) };
 const { LAW_SENTENCES, OFFICE_SENTENCES } = await import('../js/data.js');
+const { lang, setLang, L } = await import('../js/i18n.js');
 const { startLesson, startChapter, finishLesson, finishCourseSpeak, recordAnswer,
-  startFoundation, learnFoundation, startFoundationSpeak } = lesson;
+  startFoundation, learnFoundation, startFoundationSpeak, renderLearn } = lesson;
 
 const t = suite('course engine');
 const P = () => course.P;                       // live binding: re-read after a reset
@@ -303,5 +304,37 @@ localStorage.setItem('ecoute_progress_v1', JSON.stringify({
 setProgress(loadProgress());
 t.ok(foundationsAllLearned(), 'a learner already into the sounds is not re-locked behind the foundations');
 t.ok(!('foundations' in JSON.parse(localStorage.getItem('ecoute_progress_v1'))), 'the stored record itself was untouched until next save');
+
+t.section('the Foundations are bilingual, with an Italian-ear tip on each');
+FOUNDATIONS.forEach((f) => {
+  t.ok(f.goal && f.goal.en && f.goal.it, `${f.title}: goal in both languages`);
+  t.ok(f.italian && f.italian.en && f.italian.it, `${f.title}: a "for the Italian ear" tip in both`);
+  t.ok(f.theory.every((b) => b.h && b.h.en && b.h.it && b.body && b.body.en && b.body.it),
+    `${f.title}: every theory block is written in both`);
+});
+
+t.section('the language setting: default English, and L() picks the current one');
+localStorage.removeItem('ecoute_lang');
+t.eq(lang(), 'en', 'first launch is English');
+t.eq(L({ en: 'red', it: 'rosso' }), 'red', 'L() returns English by default');
+t.eq(L('same'), 'same', 'a plain string is language-agnostic');
+setLang('it');
+t.eq(lang(), 'it', 'the choice sticks');
+t.eq(L({ en: 'red', it: 'rosso' }), 'rosso', 'now L() returns Italian');
+setLang('xx');
+t.eq(lang(), 'en', 'an unknown code falls back to English');
+
+t.section('the Learn screen renders in the chosen language');
+setLang('it');
+renderLearn(0);
+const itHtml = document.getElementById('learnBody').innerHTML;
+t.ok(itHtml.includes('alfabeto') && itHtml.includes("Per l'orecchio italiano"),
+  'Italian body and Italian-ear heading present');
+setLang('en');
+renderLearn(0);
+const enHtml = document.getElementById('learnBody').innerHTML;
+t.ok(enHtml.includes('alphabet') && enHtml.includes('For the Italian ear'),
+  'English body and heading present');
+setLang('en');   // leave the suite in a known state
 
 t.done();

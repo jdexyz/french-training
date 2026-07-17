@@ -41,6 +41,15 @@ and takes the rule to **mastery** (★), exactly like a sound lesson's 🎤 step
 existing learner already into the sounds is grandfathered past them, not
 re-locked.
 
+Every Foundation is **bilingual** and carries a **🇮🇹 "for the Italian ear"**
+tip — pronunciation advice written from an Italian speaker's point of view (the
+sound that has no Italian equivalent, the classic Italian-accent traps: the
+rolled *r*, the missing nasals, reading *qu* as /kw/). A **🌐 Language · Lingua**
+switch on the menu flips Rémy's coaching and all the Foundations theory between
+**English and Italian** (default English; the French words keep their Italian
+gloss in both). It's a teaching-voice switch, not a full UI translation — the
+buttons stay put.
+
 The 30 sound lessons then follow, ordered easiest-first:
 
 1. **Oral vowels** — *chat / chaud*, *tout / tu*, *peu / peau*, the open-vs-closed
@@ -234,11 +243,13 @@ npm run test:all
 `test/course.test.mjs` runs the app's *real* script under a DOM stub and drives
 the actual `buildLessonDeck()`, `finishLesson()`, `currentIdx()` — so it breaks
 when the app breaks, not when a reimplementation drifts — including that the
-Foundations gate the sounds and grandfather an existing learner. Together with
-the reminder suite, 184 assertions. `test/browser.test.mjs` plays it end to end
-in Chromium: a Foundation (📖 Learn → 🎤 Say it), then a sound lesson's three
-steps (the mic step with Gemini stubbed) and a law chapter, checks the free
-levels are untouched, and checks the service-worker update path.
+Foundations gate the sounds, grandfather an existing learner, and read in both
+languages. Together with the reminder suite, 243 assertions.
+`test/browser.test.mjs` plays it end to end in Chromium: the 🌐 language toggle
+(Rémy and the Foundations flip to Italian and back), a Foundation (📖 Learn →
+🎤 Say it), then a sound lesson's three steps (the mic step with Gemini stubbed)
+and a law chapter, checks the free levels are untouched, and checks the
+service-worker update path.
 
 ## Files
 
@@ -249,7 +260,8 @@ browser loads the modules directly; nothing is compiled, bundled or transpiled.
 | File | What |
 | --- | --- |
 | `js/data.js` | **All the sound-contrast content.** Add a minimal pair here and the course picks it up on its own: the `focus` field (`"/u/ vs /y/"`) *is* the lesson id. No app code to touch. |
-| `js/foundations.js` | **The Foundations content** — the alphabet and the spelling-to-sound rules, as theory + 🔊 examples + speaking drills. Add one here and the course prepends it to the path and gates the sounds behind it. |
+| `js/foundations.js` | **The Foundations content** — the alphabet and the spelling-to-sound rules, as bilingual theory + 🔊 examples + an Italian-ear tip + speaking drills. Add one here and the course prepends it to the path and gates the sounds behind it. |
+| `js/i18n.js` | The 🇬🇧/🇮🇹 language setting. `lang()`/`setLang()` and `L({en,it})` — the tiny picker the renderers pass bilingual content through. Default English. |
 | `js/state.js` | The state a running round lives in — one object, on purpose (see below). |
 | `js/course.js` | The course model *and* progress: lessons, steps, gating, spaced review, streak. Derived from the data, not hand-written. |
 | `js/quiz.js` | The listening rounds (free levels 1–3 and the course's 👂 steps). |

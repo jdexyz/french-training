@@ -241,6 +241,17 @@
   .ex-it{color:var(--muted);font-style:italic;font-size:.82rem}
   .ex-spk{position:absolute;top:8px;right:10px;font-size:1rem;opacity:.55}
   .ex:hover .ex-spk{opacity:1}
+  /* the "for the Italian ear" pronunciation tip on every Foundation */
+  .italian-tip{background:rgba(74,216,200,.08);border:1px solid var(--accent2);border-radius:16px;padding:14px 18px}
+  .italian-tip h4{margin:0 0 6px;font-size:.9rem;color:var(--accent2);letter-spacing:.3px}
+  .italian-tip p{margin:0;color:var(--text);font-size:.93rem;line-height:1.6}
+  .italian-tip p b{color:var(--accent2)}
+  /* the 🇬🇧 / 🇮🇹 segmented language toggle */
+  .segset{display:inline-flex;background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:3px;flex-shrink:0}
+  .seg{border:none;background:none;color:var(--muted);font:inherit;font-size:.82rem;font-weight:600;
+    padding:6px 12px;border-radius:999px;cursor:pointer;transition:.12s}
+  .seg:hover{color:var(--text)}
+  .seg.on{background:var(--accent);color:#fff}
 
   /* A real break between Rémy's course and the free levels below it — the course
      is the app, the levels are the workshop behind it. */
@@ -317,6 +328,20 @@
     </p>
 
     <button class="btn ghost" id="installBtn">📲 Install Écoute on this device</button>
+
+    <!-- interface language: Rémy's coaching & the Foundations, in English or Italian -->
+    <div class="rem-panel" id="langPanel">
+      <div class="rem-row">
+        <div>
+          <b>🌐 Language · Lingua</b>
+          <div class="rem-sub" id="langSub">Rémy's coaching and the Foundations.</div>
+        </div>
+        <div class="segset" id="langToggle">
+          <button type="button" class="seg" data-lang="en">🇬🇧 EN</button>
+          <button type="button" class="seg" data-lang="it">🇮🇹 IT</button>
+        </div>
+      </div>
+    </div>
 
     <!-- daily push reminder -->
     <div class="rem-panel" id="remPanel">

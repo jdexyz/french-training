@@ -70,7 +70,7 @@ window.addEventListener('load', async ()=>{
      from the network. That catches a deploy that only touched the HTML, which
      leaves sw.js byte-identical and so raises no update event at all.
    ========================================================================= */
-const APP_VERSION = '2.2.0';
+const APP_VERSION = '2.3.0';
 let waitingWorker = null, updateRequested = false, reloading = false;
 
 document.getElementById('updVer').textContent = 'Écoute v' + APP_VERSION;

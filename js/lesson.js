@@ -8,6 +8,7 @@ import { S } from './state.js';
 import { TRANS } from './data.js';
 import { shuffle, escapeHtml } from './util.js';
 import { speak } from './audio.js';
+import { L as tr, lang, italianTipTitle } from './i18n.js';   // aliased: `L` is the lesson variable everywhere here
 import { geminiKey } from './gemini.js';
 import {
   LESSONS, CHAPTERS, FOUNDATIONS, speakItemsFor,
@@ -79,12 +80,13 @@ function startFoundation(i){
   show('learn');
 }
 
-// Build the theory screen for foundation i. body strings carry the author's own
-// <b> emphasis, so they're injected as HTML; the French/IPA/gloss are escaped.
+// Build the theory screen for foundation i, in the chosen language (see i18n.js).
+// body/tip strings carry the author's own <b> emphasis, so they're injected as
+// HTML; the French/IPA/gloss are escaped.
 function renderLearn(i){
   const f = FOUNDATIONS[i];
   document.getElementById('learnLabel').textContent = `${f.icon} ${f.title}`;
-  document.getElementById('learnGoal').textContent = f.goal;
+  document.getElementById('learnGoal').textContent = tr(f.goal);
 
   const exBtn = (e, bi, ei)=>
     `<button class="ex" data-b="${bi}" data-e="${ei}">
@@ -94,12 +96,20 @@ function renderLearn(i){
        <span class="ex-spk" aria-hidden="true">🔊</span>
      </button>`;
 
-  document.getElementById('learnBody').innerHTML = f.theory.map((blk, bi)=>
+  const theory = f.theory.map((blk, bi)=>
     `<div class="learn-block">
-       <h3>${escapeHtml(blk.h)}</h3>
-       <p>${blk.body}</p>
+       <h3>${escapeHtml(tr(blk.h))}</h3>
+       <p>${tr(blk.body)}</p>
        ${blk.ex && blk.ex.length ? `<div class="ex-grid">${blk.ex.map((e, ei)=> exBtn(e, bi, ei)).join('')}</div>` : ''}
      </div>`).join('');
+
+  // the pronunciation tip written from an Italian speaker's point of view
+  const tip = tr(f.italian);
+  const tipHtml = tip
+    ? `<div class="italian-tip"><h4>🇮🇹 ${escapeHtml(italianTipTitle())}</h4><p>${tip}</p></div>`
+    : '';
+
+  document.getElementById('learnBody').innerHTML = theory + tipHtml;
 
   // each example says itself when tapped
   document.querySelectorAll('#learnBody .ex').forEach(btn=>{
@@ -111,7 +121,9 @@ function renderLearn(i){
 
   const speakBtn = document.getElementById('learnSpeak');
   const learned = foundationLearned(f);
-  speakBtn.textContent = learned ? '🎤 Practise saying it →' : '🎤 Got it — say it out loud →';
+  speakBtn.textContent = learned
+    ? (lang() === 'it' ? '🎤 Esercitati a pronunciarla →' : '🎤 Practise saying it →')
+    : (lang() === 'it' ? '🎤 Ho capito — pronunciala! →' : '🎤 Got it — say it out loud →');
   speakBtn.onclick = ()=> learnFoundation(i);
 }
 
@@ -325,15 +337,18 @@ function finishCourseSpeak(){
     const grew = bumpStreak();
     saveProgress();
 
+    const it = lang() === 'it';
     document.getElementById('finalScore').textContent = `${S.spassed} / ${S.speakDeck.length}`;
     document.getElementById('resultMsg').textContent = passed
-      ? `${f.title} — you can say it now, not just read it.`
-      : `You need ${Math.round(SPEAK_PASS*100)}% to master this. Tap 🔊 Hear it, then copy it closely. (The rule is already learned — this only adds mastery.)`;
+      ? (it ? `${f.title} — ora sai dirla, non solo leggerla.`
+            : `${f.title} — you can say it now, not just read it.`)
+      : (it ? `Ti serve il ${Math.round(SPEAK_PASS*100)}% per la maestria. Tocca 🔊 Ascolta, poi imitala da vicino. (La regola è già imparata — questo aggiunge solo la maestria.)`
+            : `You need ${Math.round(SPEAK_PASS*100)}% to master this. Tap 🔊 Hear it, then copy it closely. (The rule is already learned — this only adds mastery.)`);
     document.getElementById('resultRemy').style.display = '';
     document.getElementById('resultRemyLine').innerHTML = passed
-      ? (first ? `<b>★ Bien dit !</b> ${escapeHtml(f.title)} — mastered. Your mouth agrees with the rule.`
-               : `<b>Toujours net.</b> ${escapeHtml(f.title)} still solid.`)
-      : `<b>Presque !</b> Relis les exemples, écoute, puis répète.`;
+      ? (first ? `<b>★ Bien dit !</b> ${escapeHtml(f.title)} — ${it ? 'maîtrisé. La tua bocca è d\'accordo con la regola.' : 'mastered. Your mouth agrees with the rule.'}`
+               : `<b>Toujours net.</b> ${escapeHtml(f.title)} ${it ? 'sempre solida.' : 'still solid.'}`)
+      : `<b>Presque !</b> ${it ? 'Rileggi gli esempi, écoute, puis répète.' : 'Relis les exemples, écoute, puis répète.'}`;
     document.getElementById('resultStats').innerHTML =
       `<span class="stat">+${gelato} 🍨</span>` +
       `<span class="stat${liveStreak()?' hot':''}">🔥 ${liveStreak()} day${liveStreak()===1?'':'s'}${grew?' · +1':''}</span>` +
