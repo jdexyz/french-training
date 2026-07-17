@@ -26,6 +26,7 @@ const {
 } = { ...course, ...(await import('../js/util.js')) };
 const { LAW_SENTENCES, OFFICE_SENTENCES } = await import('../js/data.js');
 const { lang, setLang, L } = await import('../js/i18n.js');
+const gemini = await import('../js/gemini.js');
 const { startLesson, startChapter, finishLesson, finishCourseSpeak, recordAnswer,
   startFoundation, learnFoundation, startFoundationSpeak, renderLearn } = lesson;
 
@@ -335,6 +336,16 @@ renderLearn(0);
 const enHtml = document.getElementById('learnBody').innerHTML;
 t.ok(enHtml.includes('alphabet') && enHtml.includes('For the Italian ear'),
   'English body and heading present');
+
+t.section('the Gemini grader asks for its advice in the chosen language');
+setLang('it');
+const gIt = JSON.stringify(gemini.buildGradeBody({ w: 'tu', ipa: 'ty', confusions: [] }, ''));
+t.ok(gIt.includes('in Italian') && !gIt.includes('in English'), 'word grader: feedback requested in Italian');
+const sIt = JSON.stringify(gemini.buildSentenceBody('la rue', ''));
+t.ok(sIt.includes('in Italian') && !sIt.includes('in English'), 'sentence grader: tips requested in Italian');
+setLang('en');
+const gEn = JSON.stringify(gemini.buildGradeBody({ w: 'tu', ipa: 'ty', confusions: [] }, ''));
+t.ok(gEn.includes('in English') && !gEn.includes('in Italian'), 'word grader: back to English');
 setLang('en');   // leave the suite in a known state
 
 t.done();

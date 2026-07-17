@@ -14,6 +14,11 @@ function geminiKey(){ return localStorage.getItem('ecoute_gemini_key') || ''; }
 function setGeminiKey(k){ localStorage.setItem('ecoute_gemini_key', k.trim()); }
 
 import { abToBase64 } from './util.js';
+import { lang } from './i18n.js';
+
+// The learner's spoken tips (feedback, per-word issues) come back in the
+// language they picked on the menu; French words and IPA stay as they are.
+function fbLang(){ return lang() === 'it' ? 'Italian' : 'English'; }
 
 function buildGradeBody(item, b64){
   const word = item.w, ipa = item.ipa;
@@ -28,7 +33,8 @@ function buildGradeBody(item, b64){
         + `Compare the vowel (and any nasal) the learner produced against the target${ipa?` /${ipa}/`:''}. Give the benefit of the doubt: if the vowel is consistent with the target it is CORRECT, even with a mild non-native accent — and even for short words that are naturally ambiguous in isolation. French nasal vowels /ɑ̃/, /ɔ̃/, /ɛ̃/ resemble each other out of context, so do NOT fail a correct target vowel merely because it could resemble a neighbour. `
         + confLine + ` `
         + `Only mark it incorrect when the vowel is CLEARLY a different sound from the target. Ignore background noise, microphone quality and volume. If the clip is empty or silent, score 0 and mark it incorrect. `
-        + `Scoring guide — 90-100: matches the target vowel, native-like; 70-89: target vowel right, mild accent (correct=true); 40-69: vowel noticeably wrong or drifts to a different sound (correct=false); below 40: a clearly different word. Respond as JSON.` },
+        + `Scoring guide — 90-100: matches the target vowel, native-like; 70-89: target vowel right, mild accent (correct=true); 40-69: vowel noticeably wrong or drifts to a different sound (correct=false); below 40: a clearly different word. `
+        + `Write the "feedback" in ${fbLang()} (but keep French words and IPA symbols exactly as they are). Respond as JSON.` },
       { inline_data:{ mime_type:'audio/wav', data: b64 } }
     ]}],
     generationConfig:{
@@ -43,7 +49,7 @@ function buildGradeBody(item, b64){
           correct:{type:'BOOLEAN', description:'true if the vowel matches the target sound (mild accent fine; isolation ambiguity is not a fault); false only when the vowel is clearly a different sound'},
           heard:{type:'STRING', description:'the closest real French word(s) it actually sounded like, or its IPA'},
           leansToward:{type:'STRING', description:'only if you clearly hear the target vowel replaced by a neighbour’s vowel, name that word; otherwise empty string'},
-          feedback:{type:'STRING', description:'one concrete articulatory tip (tongue height/position, lip rounding, nasality) in English, max 30 words'}
+          feedback:{type:'STRING', description:`one concrete articulatory tip (tongue height/position, lip rounding, nasality) in ${fbLang()}, max 30 words`}
         },
         required:['score','correct','heard','leansToward','feedback']
       }
@@ -106,7 +112,8 @@ function buildSentenceBody(sentence, b64){
         + `Listen to the recording and judge their pronunciation word by word. List the specific words from the sentence that are mispronounced — wrong vowel or consonant, missing/incorrect liaison, wrong word, or clearly misplaced stress. `
         + `Give the benefit of the doubt for a mild non-native accent: only flag a word if its error would actually stand out to a native listener. For each flagged word give a short, concrete tip. Use the exact spelling of the word as it appears in the sentence. `
         + `Ignore background noise, microphone quality and volume. If the recording is empty or does not match the sentence, score 0 and mark it not passed. `
-        + `Scoring guide — 90-100: fluent, native-like; 75-89: clear with a mild accent; 50-74: understandable but several words are off; below 50: hard to follow or wrong sentence. Respond as JSON.` },
+        + `Scoring guide — 90-100: fluent, native-like; 75-89: clear with a mild accent; 50-74: understandable but several words are off; below 50: hard to follow or wrong sentence. `
+        + `Write every "issue" tip and the overall "feedback" in ${fbLang()} (but keep the French "word" values and any IPA exactly as they are). Respond as JSON.` },
       { inline_data:{ mime_type:'audio/wav', data: b64 } }
     ]}],
     generationConfig:{
@@ -120,9 +127,9 @@ function buildSentenceBody(sentence, b64){
           mistakes:{type:'ARRAY', description:'words that are mispronounced; empty if none',
             items:{ type:'OBJECT', properties:{
               word:{type:'STRING', description:'the exact word from the sentence'},
-              issue:{type:'STRING', description:'short, concrete tip on what was wrong, max 15 words'}
+              issue:{type:'STRING', description:`short, concrete tip on what was wrong, in ${fbLang()}, max 15 words`}
             }, required:['word','issue'] } },
-          feedback:{type:'STRING', description:'one short overall tip in English, max 25 words'}
+          feedback:{type:'STRING', description:`one short overall tip in ${fbLang()}, max 25 words`}
         },
         required:['score','passed','mistakes','feedback']
       }
@@ -160,4 +167,7 @@ async function analyzeSentence(item, wavBuf){
   return oks.length===2 ? mergeSentenceVerdicts(oks[0], oks[1]) : oks[0];
 }
 
-export { GEMINI_MODEL, SPEAK_LEN, geminiKey, setGeminiKey, analyzePronunciation, analyzeSentence };
+export {
+  GEMINI_MODEL, SPEAK_LEN, geminiKey, setGeminiKey,
+  analyzePronunciation, analyzeSentence, buildGradeBody, buildSentenceBody,
+};

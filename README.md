@@ -47,8 +47,9 @@ sound that has no Italian equivalent, the classic Italian-accent traps: the
 rolled *r*, the missing nasals, reading *qu* as /kw/). A **🌐 Language · Lingua**
 switch on the menu flips Rémy's coaching and all the Foundations theory between
 **English and Italian** (default English; the French words keep their Italian
-gloss in both). It's a teaching-voice switch, not a full UI translation — the
-buttons stay put.
+gloss in both). The **mic grader follows it too** — set Italian and Gemini's
+pronunciation feedback (and the per-word tips) come back in Italian. It's a
+teaching-voice switch, not a full UI translation — the buttons stay put.
 
 The 30 sound lessons then follow, ordered easiest-first:
 
@@ -244,7 +245,8 @@ npm run test:all
 the actual `buildLessonDeck()`, `finishLesson()`, `currentIdx()` — so it breaks
 when the app breaks, not when a reimplementation drifts — including that the
 Foundations gate the sounds, grandfather an existing learner, and read in both
-languages. Together with the reminder suite, 243 assertions.
+languages, and that the grader asks for its feedback in the chosen language.
+Together with the reminder suite, 246 assertions.
 `test/browser.test.mjs` plays it end to end in Chromium: the 🌐 language toggle
 (Rémy and the Foundations flip to Italian and back), a Foundation (📖 Learn →
 🎤 Say it), then a sound lesson's three steps (the mic step with Gemini stubbed)
@@ -269,7 +271,7 @@ browser loads the modules directly; nothing is compiled, bundled or transpiled.
 | `js/lesson.js` | The course controller: what finishing a step does. |
 | `js/menu.js` | Rémy, the stats, the lesson path. |
 | `js/audio.js` | The voice engine (Google TTS + system voices, with fallback). |
-| `js/gemini.js` | The grader: API key, prompts, dual-judge scoring. |
+| `js/gemini.js` | The grader: API key, prompts, dual-judge scoring. Its spoken feedback comes back in the chosen 🇬🇧/🇮🇹 language. |
 | `js/app.js` | The entry point: service worker, updates, reminders, install, boot. |
 | `js/util.js` | Shuffle, escape, dates. |
 
